@@ -1,4 +1,4 @@
-package id.usecase
+package id.usecase.backend.note.domain
 
 data class StoredNoteShare(
     val noteId: String,

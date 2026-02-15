@@ -1,4 +1,4 @@
-package id.usecase
+package id.usecase.backend
 
 import id.usecase.noted.shared.auth.AuthLoginRequest
 import id.usecase.noted.shared.auth.AuthRegisterRequest
@@ -12,11 +12,16 @@ import id.usecase.noted.shared.note.SyncMutationType
 import id.usecase.noted.shared.note.SyncPullResponse
 import id.usecase.noted.shared.note.SyncPushRequest
 import id.usecase.noted.shared.note.SyncPushResponse
-import io.ktor.client.request.*
+import io.ktor.client.request.bearerAuth
+import io.ktor.client.request.get
+import io.ktor.client.request.post
+import io.ktor.client.request.setBody
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
-import io.ktor.http.*
-import io.ktor.server.testing.*
+import io.ktor.http.HttpStatusCode
+import io.ktor.http.contentType
+import io.ktor.server.testing.ApplicationTestBuilder
+import io.ktor.server.testing.testApplication
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue

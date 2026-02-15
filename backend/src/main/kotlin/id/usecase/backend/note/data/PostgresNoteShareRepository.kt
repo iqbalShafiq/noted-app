@@ -1,5 +1,7 @@
-package id.usecase
+package id.usecase.backend.note.data
 
+import id.usecase.backend.note.domain.NoteShareRepository
+import id.usecase.backend.note.domain.StoredNoteShare
 import javax.sql.DataSource
 
 class PostgresNoteShareRepository(

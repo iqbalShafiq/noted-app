@@ -1,5 +1,7 @@
-package id.usecase
+package id.usecase.backend.auth.service
 
+import id.usecase.backend.auth.domain.AuthRepository
+import id.usecase.backend.auth.security.JwtService
 import id.usecase.noted.shared.auth.AuthLoginRequest
 import id.usecase.noted.shared.auth.AuthRegisterRequest
 import id.usecase.noted.shared.auth.AuthResponse

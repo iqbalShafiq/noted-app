@@ -1,5 +1,6 @@
-package id.usecase
+package id.usecase.backend.plugins
 
+import id.usecase.backend.auth.security.JwtService
 import io.ktor.server.application.Application
 import io.ktor.server.application.install
 import io.ktor.server.auth.Authentication

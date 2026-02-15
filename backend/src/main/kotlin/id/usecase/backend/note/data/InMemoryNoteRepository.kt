@@ -1,5 +1,11 @@
-package id.usecase
+package id.usecase.backend.note.data
 
+import id.usecase.backend.note.domain.NoteRepository
+import id.usecase.backend.note.domain.NoteSyncRepository
+import id.usecase.backend.note.domain.StoredNote
+import id.usecase.backend.note.domain.SyncApplyResult
+import id.usecase.backend.note.domain.SyncApplyStatus
+import id.usecase.backend.note.domain.SyncPullData
 import id.usecase.noted.shared.note.SyncMutationDto
 import id.usecase.noted.shared.note.SyncMutationType
 import kotlinx.coroutines.sync.Mutex

@@ -1,6 +1,14 @@
-package id.usecase
+package id.usecase.backend
 
-import io.ktor.server.application.*
+import id.usecase.backend.auth.security.JwtService
+import id.usecase.backend.auth.service.AuthService
+import id.usecase.backend.di.configureDependencyInjection
+import id.usecase.backend.note.service.NoteSharingService
+import id.usecase.backend.plugins.configureRouting
+import id.usecase.backend.plugins.configureSecurity
+import id.usecase.backend.plugins.configureSerialization
+import id.usecase.backend.sync.service.NoteSyncService
+import io.ktor.server.application.Application
 import org.koin.ktor.ext.inject
 
 fun main(args: Array<String>) {

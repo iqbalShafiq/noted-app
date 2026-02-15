@@ -1,5 +1,7 @@
-package id.usecase
+package id.usecase.backend.auth.data
 
+import id.usecase.backend.auth.domain.AuthRepository
+import id.usecase.backend.auth.domain.AuthUser
 import java.util.UUID
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock

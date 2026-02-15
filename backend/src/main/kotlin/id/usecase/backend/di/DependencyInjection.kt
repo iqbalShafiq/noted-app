@@ -1,7 +1,23 @@
-package id.usecase
+package id.usecase.backend.di
 
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
+import id.usecase.backend.auth.data.InMemoryAuthRepository
+import id.usecase.backend.auth.data.PostgresAuthRepository
+import id.usecase.backend.auth.domain.AuthRepository
+import id.usecase.backend.auth.security.JwtConfig
+import id.usecase.backend.auth.security.JwtService
+import id.usecase.backend.auth.security.toJwtConfig
+import id.usecase.backend.auth.service.AuthService
+import id.usecase.backend.note.data.InMemoryNoteRepository
+import id.usecase.backend.note.data.InMemoryNoteShareRepository
+import id.usecase.backend.note.data.PostgresNoteRepository
+import id.usecase.backend.note.data.PostgresNoteShareRepository
+import id.usecase.backend.note.domain.NoteRepository
+import id.usecase.backend.note.domain.NoteShareRepository
+import id.usecase.backend.note.domain.NoteSyncRepository
+import id.usecase.backend.note.service.NoteSharingService
+import id.usecase.backend.sync.service.NoteSyncService
 import io.ktor.server.application.Application
 import io.ktor.server.application.ApplicationStopped
 import io.ktor.server.application.install

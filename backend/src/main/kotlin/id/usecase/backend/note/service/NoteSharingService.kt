@@ -1,5 +1,9 @@
-package id.usecase
+package id.usecase.backend.note.service
 
+import id.usecase.backend.note.domain.NoteRepository
+import id.usecase.backend.note.domain.NoteShareRepository
+import id.usecase.backend.note.domain.StoredNote
+import id.usecase.backend.note.domain.StoredNoteShare
 import id.usecase.noted.shared.note.CreateNoteRequest
 import id.usecase.noted.shared.note.NoteDto
 import id.usecase.noted.shared.note.ShareNoteRequest

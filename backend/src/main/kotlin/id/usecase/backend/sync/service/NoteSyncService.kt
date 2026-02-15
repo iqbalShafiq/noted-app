@@ -1,5 +1,8 @@
-package id.usecase
+package id.usecase.backend.sync.service
 
+import id.usecase.backend.note.domain.NoteSyncRepository
+import id.usecase.backend.note.domain.StoredNote
+import id.usecase.backend.note.domain.SyncApplyStatus
 import id.usecase.noted.shared.note.SyncConflictDto
 import id.usecase.noted.shared.note.SyncMutationDto
 import id.usecase.noted.shared.note.SyncMutationType
