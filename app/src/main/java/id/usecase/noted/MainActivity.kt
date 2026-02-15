@@ -6,7 +6,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.ui.Modifier
-import id.usecase.noted.feature.note.presentation.navigation.NoteNavigation
+import id.usecase.noted.navigation.NoteNavigation
 import id.usecase.noted.ui.theme.NotedTheme
 
 class MainActivity : ComponentActivity() {
