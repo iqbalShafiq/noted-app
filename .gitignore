@@ -1,0 +1,22 @@
+# Android Studio / IntelliJ
+*.iml
+.idea/
+
+# Gradle
+.gradle/
+
+# Local configuration
+/local.properties
+local.properties
+
+# Build outputs
+/build/
+/captures/
+.externalNativeBuild/
+.cxx/
+
+# Kotlin metadata
+.kotlin/
+
+# macOS
+.DS_Store
