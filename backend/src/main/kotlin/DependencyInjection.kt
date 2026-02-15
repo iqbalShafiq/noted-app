@@ -4,73 +4,107 @@ import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
 import io.ktor.server.application.Application
 import io.ktor.server.application.ApplicationStopped
+import io.ktor.server.application.install
 import io.ktor.server.application.log
 import io.ktor.server.config.ApplicationConfig
 import javax.sql.DataSource
+import org.koin.dsl.module
+import org.koin.ktor.ext.getKoin
+import org.koin.ktor.plugin.Koin
+import org.koin.logger.slf4jLogger
 
-data class AppServices(
-    val noteSharingService: NoteSharingService,
-    val noteSyncService: NoteSyncService,
-    val authService: AuthService,
-    val jwtService: JwtService,
-)
+fun Application.configureDependencyInjection(
+    storageModeOverride: String? = null,
+) {
+    val storageMode = resolveStorageMode(storageModeOverride)
 
-fun Application.createConfiguredServices(): AppServices {
-    val storageMode = environment.config.propertyOrNull("storage.mode")
-        ?.getString()
-        ?.trim()
-        ?.lowercase()
-        ?: "postgres"
+    install(Koin) {
+        slf4jLogger()
+        modules(
+            commonModule(environment.config),
+            when (storageMode) {
+                StorageMode.MEMORY -> inMemoryStorageModule()
+                StorageMode.POSTGRES -> postgresStorageModule()
+            },
+        )
+    }
 
-    return when (storageMode) {
-        "memory" -> {
-            log.info("Using in-memory storage mode")
-            val noteRepository = InMemoryNoteRepository()
-            val jwtService = JwtService(environment.config.toJwtConfig())
-            AppServices(
-                noteSharingService = NoteSharingService(
-                    noteRepository = noteRepository,
-                    noteShareRepository = InMemoryNoteShareRepository(),
-                ),
-                noteSyncService = NoteSyncService(noteSyncRepository = noteRepository),
-                authService = AuthService(
-                    authRepository = InMemoryAuthRepository(),
-                    jwtService = jwtService,
-                ),
-                jwtService = jwtService,
-            )
+    when (storageMode) {
+        StorageMode.MEMORY -> log.info("Using in-memory storage mode")
+        StorageMode.POSTGRES -> {
+            val postgresConfig = getKoin().get<PostgresConfig>()
+            log.info("Using PostgreSQL storage mode at {}", postgresConfig.jdbcUrl)
+            monitor.subscribe(ApplicationStopped) {
+                runCatching { getKoin().get<HikariDataSource>() }
+                    .onSuccess { dataSource -> dataSource.close() }
+            }
         }
-
-        "postgres" -> createPostgresBackedServices(environment.config)
-        else -> throw IllegalArgumentException("Unsupported storage.mode '$storageMode'")
     }
 }
 
-private fun Application.createPostgresBackedServices(config: ApplicationConfig): AppServices {
-    val postgresConfig = config.toPostgresConfig()
-    val dataSource = createPostgresDataSource(postgresConfig)
-
-    monitor.subscribe(ApplicationStopped) {
-        dataSource.close()
+private fun commonModule(config: ApplicationConfig) = module {
+    single { config }
+    single<JwtConfig> { get<ApplicationConfig>().toJwtConfig() }
+    single { JwtService(get()) }
+    single {
+        NoteSharingService(
+            noteRepository = get(),
+            noteShareRepository = get(),
+        )
     }
+    single { NoteSyncService(noteSyncRepository = get()) }
+    single {
+        AuthService(
+            authRepository = get(),
+            jwtService = get(),
+        )
+    }
+}
 
-    initializeSchema(dataSource)
-    log.info("Using PostgreSQL storage mode at ${postgresConfig.jdbcUrl}")
+private fun inMemoryStorageModule() = module {
+    single { InMemoryNoteRepository() }
+    single<NoteRepository> { get<InMemoryNoteRepository>() }
+    single<NoteSyncRepository> { get<InMemoryNoteRepository>() }
+    single<NoteShareRepository> { InMemoryNoteShareRepository() }
+    single<AuthRepository> { InMemoryAuthRepository() }
+}
 
-    val noteRepository = PostgresNoteRepository(dataSource)
-    val jwtService = JwtService(environment.config.toJwtConfig())
-    return AppServices(
-        noteSharingService = NoteSharingService(
-            noteRepository = noteRepository,
-            noteShareRepository = PostgresNoteShareRepository(dataSource),
-        ),
-        noteSyncService = NoteSyncService(noteSyncRepository = noteRepository),
-        authService = AuthService(
-            authRepository = PostgresAuthRepository(dataSource),
-            jwtService = jwtService,
-        ),
-        jwtService = jwtService,
-    )
+private fun postgresStorageModule() = module {
+    single<PostgresConfig> { get<ApplicationConfig>().toPostgresConfig() }
+    single<HikariDataSource> {
+        val dataSource = createPostgresDataSource(get())
+        initializeSchema(dataSource)
+        dataSource
+    }
+    single<DataSource> { get<HikariDataSource>() }
+    single { PostgresNoteRepository(get()) }
+    single<NoteRepository> { get<PostgresNoteRepository>() }
+    single<NoteSyncRepository> { get<PostgresNoteRepository>() }
+    single<NoteShareRepository> { PostgresNoteShareRepository(get()) }
+    single<AuthRepository> { PostgresAuthRepository(get()) }
+}
+
+private enum class StorageMode {
+    MEMORY,
+    POSTGRES,
+}
+
+private fun Application.resolveStorageMode(storageModeOverride: String?): StorageMode {
+    val rawMode = storageModeOverride
+        ?.trim()
+        ?.lowercase()
+        ?.takeIf { it.isNotBlank() }
+        ?: environment.config.propertyOrNull("storage.mode")
+            ?.getString()
+            ?.trim()
+            ?.lowercase()
+            ?: "postgres"
+
+    return when (rawMode) {
+        "memory" -> StorageMode.MEMORY
+        "postgres" -> StorageMode.POSTGRES
+        else -> throw IllegalArgumentException("Unsupported storage.mode '$rawMode'")
+    }
 }
 
 private data class PostgresConfig(

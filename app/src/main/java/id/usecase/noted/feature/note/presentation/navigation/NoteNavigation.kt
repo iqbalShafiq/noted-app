@@ -8,12 +8,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
-import androidx.lifecycle.viewmodel.compose.viewModel
-import id.usecase.noted.feature.note.data.NoteRepositoryProvider
 import id.usecase.noted.feature.note.presentation.editor.NoteEditorIntent
 import id.usecase.noted.feature.note.presentation.editor.NoteEditorScreenRoot
 import id.usecase.noted.feature.note.presentation.editor.NoteEditorViewModel
@@ -27,24 +24,14 @@ import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.ui.NavDisplay
 import kotlinx.coroutines.launch
+import org.koin.androidx.compose.koinViewModel
 
 @Composable
 fun NoteNavigation(
     modifier: Modifier = Modifier,
 ) {
-    val applicationContext = LocalContext.current.applicationContext
-    val noteRepository = remember(applicationContext) {
-        NoteRepositoryProvider.provide(applicationContext)
-    }
-    val listViewModel: NoteListViewModel = viewModel(
-        factory = NoteListViewModel.factory(
-            noteRepository = noteRepository,
-            noteSyncCoordinator = noteRepository,
-        ),
-    )
-    val editorViewModel: NoteEditorViewModel = viewModel(
-        factory = NoteEditorViewModel.factory(noteRepository),
-    )
+    val listViewModel: NoteListViewModel = koinViewModel()
+    val editorViewModel: NoteEditorViewModel = koinViewModel()
     val backStack = rememberNavBackStack(NoteListNavKey)
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()

@@ -3,7 +3,6 @@ package id.usecase.noted.feature.note.presentation.editor
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import id.usecase.noted.feature.note.data.NoteRepository
 import id.usecase.noted.feature.note.domain.NoteContentBlock
@@ -402,17 +401,4 @@ class NoteEditorViewModel(
         )
     }
 
-    companion object {
-        fun factory(noteRepository: NoteRepository): ViewModelProvider.Factory {
-            return object : ViewModelProvider.Factory {
-                override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                    if (modelClass.isAssignableFrom(NoteEditorViewModel::class.java)) {
-                        @Suppress("UNCHECKED_CAST")
-                        return NoteEditorViewModel(noteRepository) as T
-                    }
-                    throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")
-                }
-            }
-        }
-    }
 }

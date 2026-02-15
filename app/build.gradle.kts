@@ -8,6 +8,18 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
 }
 
+val backendBaseUrl: String = (project.findProperty("BACKEND_BASE_URL") as? String)
+    ?.trim()
+    ?.takeIf { it.isNotEmpty() }
+    ?: "http://10.0.2.2:8080"
+
+fun toBuildConfigStringLiteral(value: String): String {
+    val escaped = value
+        .replace("\\", "\\\\")
+        .replace("\"", "\\\"")
+    return "\"$escaped\""
+}
+
 android {
     namespace = "id.usecase.noted"
     compileSdk {
@@ -20,6 +32,11 @@ android {
         targetSdk = 36
         versionCode = 1
         versionName = "1.0"
+        buildConfigField(
+            "String",
+            "BACKEND_BASE_URL",
+            toBuildConfigStringLiteral(backendBaseUrl),
+        )
         manifestPlaceholders["MAPS_API_KEY"] =
             (project.findProperty("MAPS_API_KEY") as? String).orEmpty()
 
@@ -41,6 +58,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 
@@ -77,6 +95,8 @@ dependencies {
     implementation(libs.ktor.client.cio)
     implementation(libs.ktor.client.content.negotiation)
     implementation(libs.ktor.serialization.kotlinx.json)
+    implementation(libs.koin.android)
+    implementation(libs.koin.androidx.compose)
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)

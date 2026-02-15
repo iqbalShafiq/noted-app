@@ -4,8 +4,8 @@ Noted is a Kotlin monorepo containing an Android app, a Ktor backend, and shared
 
 ## Modules
 
-- `app/` - Android app (Jetpack Compose, Room, Navigation 3, Ktor client, DataStore)
-- `backend/` - Ktor server (JWT auth, repository pattern, PostgreSQL/in-memory storage)
+- `app/` - Android app (Jetpack Compose, Room, Navigation 3, Ktor client, DataStore, Koin DI)
+- `backend/` - Ktor server (JWT auth, repository pattern, PostgreSQL/in-memory storage, Koin DI)
 - `shared/` - Shared `kotlinx.serialization` contracts for auth, notes, and sync
 
 ## Prerequisites
@@ -62,6 +62,12 @@ Default ports:
 - Postgres: `localhost:5433`
 
 Android emulator should use `http://10.0.2.2:8080` for backend access.
+
+To override app backend endpoint, set Gradle property `BACKEND_BASE_URL` (for example in `local.properties`):
+
+```properties
+BACKEND_BASE_URL=http://10.0.2.2:8080
+```
 
 ## Project Conventions
 

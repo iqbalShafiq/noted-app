@@ -1,19 +1,27 @@
 package id.usecase
 
 import io.ktor.server.application.*
+import org.koin.ktor.ext.inject
 
 fun main(args: Array<String>) {
     io.ktor.server.netty.EngineMain.main(args)
 }
 
 fun Application.module(
-    appServices: AppServices = createConfiguredServices(),
+    storageModeOverride: String? = null,
 ) {
+    configureDependencyInjection(storageModeOverride = storageModeOverride)
+
+    val jwtService by inject<JwtService>()
+    val noteSharingService by inject<NoteSharingService>()
+    val noteSyncService by inject<NoteSyncService>()
+    val authService by inject<AuthService>()
+
     configureSerialization()
-    configureSecurity(jwtService = appServices.jwtService)
+    configureSecurity(jwtService = jwtService)
     configureRouting(
-        noteSharingService = appServices.noteSharingService,
-        noteSyncService = appServices.noteSyncService,
-        authService = appServices.authService,
+        noteSharingService = noteSharingService,
+        noteSyncService = noteSyncService,
+        authService = authService,
     )
 }

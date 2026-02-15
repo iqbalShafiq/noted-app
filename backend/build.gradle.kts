@@ -26,6 +26,8 @@ dependencies {
     implementation("io.ktor:ktor-server-auth-jwt")
     implementation("io.ktor:ktor-server-call-logging")
     implementation("io.ktor:ktor-server-status-pages")
+    implementation(libs.koin.ktor)
+    implementation(libs.koin.logger.slf4j)
     implementation("com.zaxxer:HikariCP:5.1.0")
     implementation("org.postgresql:postgresql:42.7.9")
     implementation("org.mindrot:jbcrypt:0.4")

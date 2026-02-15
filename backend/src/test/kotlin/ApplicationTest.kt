@@ -30,7 +30,7 @@ class ApplicationTest {
     @Test
     fun testCreateAndFetchNote() = testApplication {
         application {
-            module(appServices = inMemoryServices())
+            module(storageModeOverride = "memory")
         }
 
         val auth = registerAndLogin(username = "owner-1", password = "password123")
@@ -62,7 +62,7 @@ class ApplicationTest {
     @Test
     fun testShareAndQuerySharedNotes() = testApplication {
         application {
-            module(appServices = inMemoryServices())
+            module(storageModeOverride = "memory")
         }
 
         val owner = registerAndLogin(username = "owner-2", password = "password123")
@@ -111,7 +111,7 @@ class ApplicationTest {
     @Test
     fun testSyncPushAndPull() = testApplication {
         application {
-            module(appServices = inMemoryServices())
+            module(storageModeOverride = "memory")
         }
 
         val auth = registerAndLogin(username = "owner-sync", password = "password123")
@@ -159,7 +159,7 @@ class ApplicationTest {
     @Test
     fun testLoginEndpoint() = testApplication {
         application {
-            module(appServices = inMemoryServices())
+            module(storageModeOverride = "memory")
         }
 
         val registerResponse = client.post("/api/auth/register") {
@@ -177,33 +177,6 @@ class ApplicationTest {
         val auth = json.decodeFromString<AuthResponse>(loginResponse.bodyAsText())
         assertTrue(auth.accessToken.isNotBlank())
         assertEquals("tester-login", auth.username)
-    }
-
-    private fun inMemoryServices(): AppServices {
-        val noteRepository = InMemoryNoteRepository()
-        val jwtService = JwtService(
-            config = JwtConfig(
-                issuer = "test-issuer",
-                audience = "test-audience",
-                realm = "test",
-                secret = "test-secret-key-for-jwt",
-                expiresInSeconds = 3600,
-            ),
-        )
-        return NoteSharingService(
-            noteRepository = noteRepository,
-            noteShareRepository = InMemoryNoteShareRepository(),
-        ).let { sharingService ->
-            AppServices(
-                noteSharingService = sharingService,
-                noteSyncService = NoteSyncService(noteSyncRepository = noteRepository),
-                authService = AuthService(
-                    authRepository = InMemoryAuthRepository(),
-                    jwtService = jwtService,
-                ),
-                jwtService = jwtService,
-            )
-        }
     }
 
     private suspend fun ApplicationTestBuilder.registerAndLogin(

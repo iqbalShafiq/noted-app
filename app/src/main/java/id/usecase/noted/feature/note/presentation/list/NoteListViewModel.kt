@@ -1,7 +1,6 @@
 package id.usecase.noted.feature.note.presentation.list
 
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import id.usecase.noted.feature.note.data.NoteRepository
 import id.usecase.noted.feature.note.data.sync.NoteSyncCoordinator
@@ -270,25 +269,6 @@ class NoteListViewModel(
         }
     }
 
-    companion object {
-        fun factory(
-            noteRepository: NoteRepository,
-            noteSyncCoordinator: NoteSyncCoordinator,
-        ): ViewModelProvider.Factory {
-            return object : ViewModelProvider.Factory {
-                override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                    if (modelClass.isAssignableFrom(NoteListViewModel::class.java)) {
-                        @Suppress("UNCHECKED_CAST")
-                        return NoteListViewModel(
-                            noteRepository = noteRepository,
-                            noteSyncCoordinator = noteSyncCoordinator,
-                        ) as T
-                    }
-                    throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")
-                }
-            }
-        }
-    }
 }
 
 private fun Note.toListItemUi(): NoteListItemUi {
