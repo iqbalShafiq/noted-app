@@ -8,4 +8,6 @@ sealed interface NoteListEffect {
     data object NavigateToSync : NoteListEffect
 
     data object NavigateToAccount : NoteListEffect
+
+    data object NavigateToExplore : NoteListEffect
 }

@@ -26,6 +26,8 @@ import id.usecase.noted.presentation.note.sync.SyncScreenRoot
 import id.usecase.noted.presentation.note.sync.SyncViewModel
 import id.usecase.noted.presentation.account.AccountScreenRoot
 import id.usecase.noted.presentation.account.AccountViewModel
+import id.usecase.noted.presentation.note.explore.ExploreScreenRoot
+import id.usecase.noted.presentation.note.explore.ExploreViewModel
 import androidx.navigation3.runtime.NavBackStack
 import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.entryProvider
@@ -43,6 +45,7 @@ fun NoteNavigation(
     val authViewModel: AuthViewModel = koinViewModel()
     val syncViewModel: SyncViewModel = koinViewModel()
     val accountViewModel: AccountViewModel = koinViewModel()
+    val exploreViewModel: ExploreViewModel = koinViewModel()
     val backStack = rememberNavBackStack(NoteListNavKey)
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
@@ -86,6 +89,11 @@ fun NoteNavigation(
                         onNavigateToAccount = {
                             if (backStack.lastOrNull() != AccountNavKey) {
                                 backStack.add(AccountNavKey)
+                            }
+                        },
+                        onNavigateToExplore = {
+                            if (backStack.lastOrNull() != ExploreNavKey) {
+                                backStack.add(ExploreNavKey)
                             }
                         },
                         onNavigateToEditor = { noteId ->
@@ -242,6 +250,19 @@ fun NoteNavigation(
                         },
                         onNavigateBack = {
                             backStack.removeLastOrNull()
+                        },
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                }
+                entry<ExploreNavKey> {
+                    ExploreScreenRoot(
+                        viewModel = exploreViewModel,
+                        onShowMessage = ::showMessage,
+                        onNavigateBack = {
+                            backStack.removeLastOrNull()
+                            if (backStack.isEmpty()) {
+                                backStack.add(NoteListNavKey)
+                            }
                         },
                         modifier = Modifier.fillMaxSize(),
                     )

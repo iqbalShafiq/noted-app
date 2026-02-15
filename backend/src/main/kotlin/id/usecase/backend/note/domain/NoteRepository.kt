@@ -20,6 +20,8 @@ interface NoteRepository {
     suspend fun findByOwner(ownerUserId: String): List<StoredNote>
 
     suspend fun findByIds(noteIds: Set<String>): List<StoredNote>
+
+    suspend fun findAllExcludingOwner(excludeOwnerUserId: String, limit: Int = 50): List<StoredNote>
 }
 
 interface NoteSyncRepository {

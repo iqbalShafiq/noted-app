@@ -16,4 +16,6 @@ sealed interface NoteListIntent {
     data object SyncClicked : NoteListIntent
 
     data object AccountClicked : NoteListIntent
+
+    data object ExploreClicked : NoteListIntent
 }

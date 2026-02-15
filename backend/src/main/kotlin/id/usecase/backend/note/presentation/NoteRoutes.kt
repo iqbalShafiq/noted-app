@@ -72,5 +72,11 @@ fun Route.registerNoteRoutes(noteSharingService: NoteSharingService) {
             val userId = call.requireUserId()
             call.respond(noteSharingService.getSharedWith(userId))
         }
+
+        get("/notes/explore") {
+            val userId = call.requireUserId()
+            val limit = call.request.queryParameters["limit"]?.toIntOrNull() ?: 50
+            call.respond(noteSharingService.exploreNotes(excludeUserId = userId, limit = limit))
+        }
     }
 }

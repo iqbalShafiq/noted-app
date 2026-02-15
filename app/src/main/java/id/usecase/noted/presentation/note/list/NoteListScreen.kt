@@ -14,6 +14,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.Explore
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Sync
@@ -59,6 +60,7 @@ fun NoteListScreenRoot(
     onNavigateToEditor: (Long?) -> Unit,
     onNavigateToSync: () -> Unit,
     onNavigateToAccount: () -> Unit,
+    onNavigateToExplore: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -70,6 +72,7 @@ fun NoteListScreenRoot(
                 is NoteListEffect.ShowMessage -> onShowMessage(effect.message)
                 NoteListEffect.NavigateToSync -> onNavigateToSync()
                 NoteListEffect.NavigateToAccount -> onNavigateToAccount()
+                NoteListEffect.NavigateToExplore -> onNavigateToExplore()
             }
         }
     }
@@ -120,10 +123,10 @@ fun NoteListScreen(
         bottomBar = {
             BottomAppBar(
                 actions = {
-                    IconButton(onClick = { isSearchActive = true }) {
+                    IconButton(onClick = { onIntent(NoteListIntent.ExploreClicked) }) {
                         Icon(
-                            imageVector = Icons.Default.Search,
-                            contentDescription = "Cari",
+                            imageVector = Icons.Default.Explore,
+                            contentDescription = "Jelajahi",
                         )
                     }
                     IconButton(onClick = { onIntent(NoteListIntent.SyncClicked) }) {

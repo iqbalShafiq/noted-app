@@ -107,6 +107,22 @@ class PostgresNoteRepository(
         }
     }
 
+    override suspend fun findAllExcludingOwner(excludeOwnerUserId: String, limit: Int): List<StoredNote> {
+        dataSource.connection.use { connection ->
+            connection.prepareStatement(SELECT_ALL_EXCLUDING_OWNER_SQL).use { statement ->
+                statement.setString(1, excludeOwnerUserId)
+                statement.setInt(2, limit)
+                statement.executeQuery().use { resultSet ->
+                    val notes = mutableListOf<StoredNote>()
+                    while (resultSet.next()) {
+                        notes += resultSet.toStoredNote()
+                    }
+                    return notes
+                }
+            }
+        }
+    }
+
     override suspend fun applyMutation(
         ownerUserId: String,
         mutation: SyncMutationDto,
@@ -362,6 +378,14 @@ private const val SELECT_BY_OWNER_SQL = """
     FROM notes
     WHERE owner_user_id = ? AND deleted_at_epoch_millis IS NULL
     ORDER BY created_at_epoch_millis DESC
+"""
+
+private const val SELECT_ALL_EXCLUDING_OWNER_SQL = """
+    SELECT id, owner_user_id, content, created_at_epoch_millis, updated_at_epoch_millis, deleted_at_epoch_millis, version
+    FROM notes
+    WHERE owner_user_id != ? AND deleted_at_epoch_millis IS NULL
+    ORDER BY created_at_epoch_millis DESC
+    LIMIT ?
 """
 
 private const val INSERT_SYNC_EVENT_SQL = """

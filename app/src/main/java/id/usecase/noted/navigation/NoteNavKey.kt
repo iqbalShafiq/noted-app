@@ -35,3 +35,6 @@ data object SyncNavKey : NavKey
 
 @Serializable
 data object AccountNavKey : NavKey
+
+@Serializable
+data object ExploreNavKey : NavKey

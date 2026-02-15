@@ -69,6 +69,10 @@ class NoteListViewModel(
             NoteListIntent.AccountClicked -> {
                 _effect.trySend(NoteListEffect.NavigateToAccount)
             }
+
+            NoteListIntent.ExploreClicked -> {
+                _effect.trySend(NoteListEffect.NavigateToExplore)
+            }
         }
     }
 

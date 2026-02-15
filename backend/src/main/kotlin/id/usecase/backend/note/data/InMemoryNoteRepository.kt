@@ -55,6 +55,17 @@ class InMemoryNoteRepository : NoteRepository, NoteSyncRepository {
         }
     }
 
+    override suspend fun findAllExcludingOwner(excludeOwnerUserId: String, limit: Int): List<StoredNote> {
+        return mutex.withLock {
+            notesById.values
+                .asSequence()
+                .filter { it.ownerUserId != excludeOwnerUserId && it.deletedAtEpochMillis == null }
+                .sortedByDescending { it.createdAtEpochMillis }
+                .take(limit)
+                .toList()
+        }
+    }
+
     override suspend fun applyMutation(
         ownerUserId: String,
         mutation: SyncMutationDto,

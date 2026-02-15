@@ -5,15 +5,20 @@ import id.usecase.noted.data.NoteRepository
 import id.usecase.noted.data.RoomNoteRepository
 import id.usecase.noted.data.local.NoteDatabase
 import id.usecase.noted.data.sync.AuthApi
+import id.usecase.noted.data.sync.ExploreApi
+import id.usecase.noted.data.sync.ExploreRepository
 import id.usecase.noted.data.sync.KtorAuthApi
+import id.usecase.noted.data.sync.KtorExploreApi
 import id.usecase.noted.data.sync.KtorNoteSyncApi
 import id.usecase.noted.data.sync.NetworkMonitor
 import id.usecase.noted.data.sync.NoteSyncApi
 import id.usecase.noted.data.sync.NoteSyncCoordinator
 import id.usecase.noted.data.sync.SessionStore
+import id.usecase.noted.data.sync.SyncExploreRepository
 import id.usecase.noted.presentation.account.AccountViewModel
 import id.usecase.noted.presentation.auth.AuthViewModel
 import id.usecase.noted.presentation.note.editor.NoteEditorViewModel
+import id.usecase.noted.presentation.note.explore.ExploreViewModel
 import id.usecase.noted.presentation.note.list.NoteListViewModel
 import id.usecase.noted.presentation.note.sync.SyncViewModel
 import io.ktor.client.HttpClient
@@ -72,6 +77,18 @@ val appModule = module {
             baseUrl = resolveBackendBaseUrl(BuildConfig.BACKEND_BASE_URL),
         )
     }
+    single<ExploreApi> {
+        KtorExploreApi(
+            httpClient = get(),
+            baseUrl = resolveBackendBaseUrl(BuildConfig.BACKEND_BASE_URL),
+        )
+    }
+    single<ExploreRepository> {
+        SyncExploreRepository(
+            exploreApi = get(),
+            sessionStore = get(),
+        )
+    }
     single {
         RoomNoteRepository(
             noteDao = get(),
@@ -107,5 +124,8 @@ val appModule = module {
     }
     viewModel {
         AccountViewModel(noteSyncCoordinator = get())
+    }
+    viewModel {
+        ExploreViewModel(exploreRepository = get())
     }
 }
