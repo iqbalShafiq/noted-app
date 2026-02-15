@@ -50,10 +50,25 @@ class NoteListViewModel(
             is NoteListIntent.NoteDeleteClicked -> deleteNote(intent.noteId)
 
             NoteListIntent.RetryObserve -> startObserveNotes()
-            NoteListIntent.AuthClicked -> _effect.trySend(NoteListEffect.NavigateToAuth)
-            NoteListIntent.SyncNowClicked -> syncNow()
-            NoteListIntent.UploadNowClicked -> uploadNow()
-            NoteListIntent.ImportNowClicked -> importNow()
+
+            is NoteListIntent.SearchQueryChanged -> {
+                _state.update { currentState ->
+                    currentState.copy(searchQuery = intent.query)
+                }
+            }
+
+            NoteListIntent.SearchClicked -> {
+                // Search is handled reactively via state update
+                // UI can use filteredNotes from state
+            }
+
+            NoteListIntent.SyncClicked -> {
+                _effect.trySend(NoteListEffect.NavigateToSync)
+            }
+
+            NoteListIntent.AccountClicked -> {
+                _effect.trySend(NoteListEffect.NavigateToAccount)
+            }
         }
     }
 
@@ -121,48 +136,6 @@ class NoteListViewModel(
                 _effect.trySend(
                     NoteListEffect.ShowMessage(
                         error.message ?: "Gagal menghapus note",
-                    ),
-                )
-            }
-        }
-    }
-
-    private fun syncNow() {
-        viewModelScope.launch {
-            runCatching {
-                noteSyncCoordinator.syncNow()
-            }.onFailure { error ->
-                _effect.trySend(
-                    NoteListEffect.ShowMessage(
-                        error.message ?: "Sinkronisasi gagal",
-                    ),
-                )
-            }
-        }
-    }
-
-    private fun uploadNow() {
-        viewModelScope.launch {
-            runCatching {
-                noteSyncCoordinator.uploadPendingNow()
-            }.onFailure { error ->
-                _effect.trySend(
-                    NoteListEffect.ShowMessage(
-                        error.message ?: "Upload manual gagal",
-                    ),
-                )
-            }
-        }
-    }
-
-    private fun importNow() {
-        viewModelScope.launch {
-            runCatching {
-                noteSyncCoordinator.importNow()
-            }.onFailure { error ->
-                _effect.trySend(
-                    NoteListEffect.ShowMessage(
-                        error.message ?: "Import dari server gagal",
                     ),
                 )
             }

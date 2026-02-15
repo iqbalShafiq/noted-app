@@ -22,6 +22,10 @@ import id.usecase.noted.presentation.note.editor.camera.NoteCameraScreenRoot
 import id.usecase.noted.presentation.note.editor.location.NoteLocationPickerScreen
 import id.usecase.noted.presentation.note.list.NoteListScreenRoot
 import id.usecase.noted.presentation.note.list.NoteListViewModel
+import id.usecase.noted.presentation.note.sync.SyncScreenRoot
+import id.usecase.noted.presentation.note.sync.SyncViewModel
+import id.usecase.noted.presentation.account.AccountScreenRoot
+import id.usecase.noted.presentation.account.AccountViewModel
 import androidx.navigation3.runtime.NavBackStack
 import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.entryProvider
@@ -37,6 +41,8 @@ fun NoteNavigation(
     val listViewModel: NoteListViewModel = koinViewModel()
     val editorViewModel: NoteEditorViewModel = koinViewModel()
     val authViewModel: AuthViewModel = koinViewModel()
+    val syncViewModel: SyncViewModel = koinViewModel()
+    val accountViewModel: AccountViewModel = koinViewModel()
     val backStack = rememberNavBackStack(NoteListNavKey)
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
@@ -72,9 +78,14 @@ fun NoteNavigation(
                     NoteListScreenRoot(
                         viewModel = listViewModel,
                         onShowMessage = ::showMessage,
-                        onNavigateToAuth = {
-                            if (backStack.lastOrNull() != AuthLoginNavKey) {
-                                backStack.add(AuthLoginNavKey)
+                        onNavigateToSync = {
+                            if (backStack.lastOrNull() != SyncNavKey) {
+                                backStack.add(SyncNavKey)
+                            }
+                        },
+                        onNavigateToAccount = {
+                            if (backStack.lastOrNull() != AccountNavKey) {
+                                backStack.add(AccountNavKey)
                             }
                         },
                         onNavigateToEditor = { noteId ->
@@ -83,6 +94,37 @@ fun NoteNavigation(
                                 backStack = backStack,
                                 destination = NoteEditorNavKey(noteId = noteId),
                             )
+                        },
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                }
+                entry<SyncNavKey> {
+                    SyncScreenRoot(
+                        viewModel = syncViewModel,
+                        onShowMessage = ::showMessage,
+                        onNavigateBack = {
+                            backStack.removeLastOrNull()
+                            if (backStack.isEmpty()) {
+                                backStack.add(NoteListNavKey)
+                            }
+                        },
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                }
+                entry<AccountNavKey> {
+                    AccountScreenRoot(
+                        viewModel = accountViewModel,
+                        onShowMessage = ::showMessage,
+                        onNavigateBack = {
+                            backStack.removeLastOrNull()
+                            if (backStack.isEmpty()) {
+                                backStack.add(NoteListNavKey)
+                            }
+                        },
+                        onNavigateToLogin = {
+                            if (backStack.lastOrNull() != AuthLoginNavKey) {
+                                backStack.add(AuthLoginNavKey)
+                            }
                         },
                         modifier = Modifier.fillMaxSize(),
                     )

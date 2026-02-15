@@ -9,11 +9,11 @@ sealed interface NoteListIntent {
 
     data object RetryObserve : NoteListIntent
 
-    data object AuthClicked : NoteListIntent
+    data class SearchQueryChanged(val query: String) : NoteListIntent
 
-    data object SyncNowClicked : NoteListIntent
+    data object SearchClicked : NoteListIntent
 
-    data object UploadNowClicked : NoteListIntent
+    data object SyncClicked : NoteListIntent
 
-    data object ImportNowClicked : NoteListIntent
+    data object AccountClicked : NoteListIntent
 }

@@ -7,7 +7,17 @@ data class NoteListState(
     val errorMessage: String? = null,
     val notes: List<NoteListItemUi> = emptyList(),
     val syncStatus: NoteSyncStatus = NoteSyncStatus(),
-)
+    val searchQuery: String = "",
+) {
+    val filteredNotes: List<NoteListItemUi>
+        get() = if (searchQuery.isBlank()) {
+            notes
+        } else {
+            notes.filter { note ->
+                note.content.contains(searchQuery, ignoreCase = true)
+            }
+        }
+}
 
 data class NoteListItemUi(
     val id: Long,

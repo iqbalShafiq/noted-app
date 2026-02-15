@@ -11,9 +11,11 @@ import id.usecase.noted.data.sync.NetworkMonitor
 import id.usecase.noted.data.sync.NoteSyncApi
 import id.usecase.noted.data.sync.NoteSyncCoordinator
 import id.usecase.noted.data.sync.SessionStore
+import id.usecase.noted.presentation.account.AccountViewModel
 import id.usecase.noted.presentation.auth.AuthViewModel
 import id.usecase.noted.presentation.note.editor.NoteEditorViewModel
 import id.usecase.noted.presentation.note.list.NoteListViewModel
+import id.usecase.noted.presentation.note.sync.SyncViewModel
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.cio.CIO
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
@@ -95,5 +97,15 @@ val appModule = module {
     }
     viewModel {
         AuthViewModel(noteSyncCoordinator = get())
+    }
+    viewModel {
+        SyncViewModel(
+            noteRepository = get(),
+            noteSyncCoordinator = get(),
+            noteDao = get(),
+        )
+    }
+    viewModel {
+        AccountViewModel(noteSyncCoordinator = get())
     }
 }

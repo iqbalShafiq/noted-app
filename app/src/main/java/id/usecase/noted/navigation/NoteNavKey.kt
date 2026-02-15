@@ -29,3 +29,9 @@ data class NoteLocationPickerNavKey(
     val longitude: Double? = null,
     val label: String? = null,
 ) : NavKey
+
+@Serializable
+data object SyncNavKey : NavKey
+
+@Serializable
+data object AccountNavKey : NavKey

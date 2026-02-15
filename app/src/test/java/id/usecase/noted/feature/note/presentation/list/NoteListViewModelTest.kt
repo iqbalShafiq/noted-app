@@ -1,12 +1,15 @@
 package id.usecase.noted.feature.note.presentation.list
 
-import id.usecase.noted.feature.note.data.NoteRepository
-import id.usecase.noted.feature.note.data.sync.NoteSyncCoordinator
-import id.usecase.noted.feature.note.data.sync.NoteSyncStatus
-import id.usecase.noted.feature.note.data.sync.UserSession
-import id.usecase.noted.feature.note.domain.Note
-import id.usecase.noted.feature.note.data.sync.LocalSyncStatus
+import id.usecase.noted.data.NoteRepository
+import id.usecase.noted.data.sync.LocalSyncStatus
+import id.usecase.noted.data.sync.NoteSyncCoordinator
+import id.usecase.noted.data.sync.NoteSyncStatus
+import id.usecase.noted.data.sync.UserSession
+import id.usecase.noted.domain.Note
 import id.usecase.noted.feature.note.presentation.MainDispatcherRule
+import id.usecase.noted.presentation.note.list.NoteListEffect
+import id.usecase.noted.presentation.note.list.NoteListIntent
+import id.usecase.noted.presentation.note.list.NoteListViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.Flow
@@ -74,16 +77,111 @@ class NoteListViewModelTest {
     }
 
     @Test
-    fun authClickedEmitsNavigateToAuthEffect() = runTest {
+    fun searchQueryChangedUpdatesSearchQuery() = runTest {
+        val repository = FakeListRepository()
+        val syncCoordinator = FakeSyncCoordinator()
+        val viewModel = NoteListViewModel(repository, syncCoordinator)
+
+        viewModel.onIntent(NoteListIntent.SearchQueryChanged("test query"))
+        advanceUntilIdle()
+
+        assertEquals("test query", viewModel.state.value.searchQuery)
+    }
+
+    @Test
+    fun syncClickedEmitsNavigateToSyncEffect() = runTest {
         val repository = FakeListRepository()
         val syncCoordinator = FakeSyncCoordinator()
         val viewModel = NoteListViewModel(repository, syncCoordinator)
         val firstEffect = async { viewModel.effect.first() }
 
-        viewModel.onIntent(NoteListIntent.AuthClicked)
+        viewModel.onIntent(NoteListIntent.SyncClicked)
         advanceUntilIdle()
 
-        assertEquals(NoteListEffect.NavigateToAuth, firstEffect.await())
+        assertEquals(NoteListEffect.NavigateToSync, firstEffect.await())
+    }
+
+    @Test
+    fun accountClickedEmitsNavigateToAccountEffect() = runTest {
+        val repository = FakeListRepository()
+        val syncCoordinator = FakeSyncCoordinator()
+        val viewModel = NoteListViewModel(repository, syncCoordinator)
+        val firstEffect = async { viewModel.effect.first() }
+
+        viewModel.onIntent(NoteListIntent.AccountClicked)
+        advanceUntilIdle()
+
+        assertEquals(NoteListEffect.NavigateToAccount, firstEffect.await())
+    }
+
+    @Test
+    fun filteredNotesFiltersByContent() = runTest {
+        val repository = FakeListRepository()
+        val syncCoordinator = FakeSyncCoordinator()
+        val viewModel = NoteListViewModel(repository, syncCoordinator)
+
+        repository.emit(
+            listOf(
+                Note(
+                    id = 1,
+                    noteId = "n-1",
+                    content = "Catatan rapat project",
+                    createdAt = 1000,
+                    updatedAt = 1000,
+                    ownerUserId = null,
+                    syncStatus = LocalSyncStatus.LOCAL_ONLY,
+                ),
+                Note(
+                    id = 2,
+                    noteId = "n-2",
+                    content = "Belanja mingguan",
+                    createdAt = 2000,
+                    updatedAt = 2000,
+                    ownerUserId = null,
+                    syncStatus = LocalSyncStatus.LOCAL_ONLY,
+                ),
+            ),
+        )
+        advanceUntilIdle()
+
+        viewModel.onIntent(NoteListIntent.SearchQueryChanged("rapat"))
+        advanceUntilIdle()
+
+        assertEquals(1, viewModel.state.value.filteredNotes.size)
+        assertEquals("Catatan rapat project", viewModel.state.value.filteredNotes.first().content)
+    }
+
+    @Test
+    fun filteredNotesReturnsAllWhenSearchQueryBlank() = runTest {
+        val repository = FakeListRepository()
+        val syncCoordinator = FakeSyncCoordinator()
+        val viewModel = NoteListViewModel(repository, syncCoordinator)
+
+        repository.emit(
+            listOf(
+                Note(
+                    id = 1,
+                    noteId = "n-1",
+                    content = "Catatan rapat",
+                    createdAt = 1000,
+                    updatedAt = 1000,
+                    ownerUserId = null,
+                    syncStatus = LocalSyncStatus.LOCAL_ONLY,
+                ),
+                Note(
+                    id = 2,
+                    noteId = "n-2",
+                    content = "Belanja mingguan",
+                    createdAt = 2000,
+                    updatedAt = 2000,
+                    ownerUserId = null,
+                    syncStatus = LocalSyncStatus.LOCAL_ONLY,
+                ),
+            ),
+        )
+        advanceUntilIdle()
+
+        assertEquals(2, viewModel.state.value.filteredNotes.size)
     }
 }
 
