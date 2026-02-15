@@ -21,4 +21,6 @@ dependencyResolutionManagement {
 
 rootProject.name = "Noted"
 include(":app")
+include(":backend")
+include(":shared")
  

@@ -1,6 +1,7 @@
 package id.usecase.noted.feature.note.presentation.editor
 
 import id.usecase.noted.feature.note.data.NoteRepository
+import id.usecase.noted.feature.note.data.sync.LocalSyncStatus
 import id.usecase.noted.feature.note.domain.NoteContentBlock
 import id.usecase.noted.feature.note.domain.NoteContentCodec
 import id.usecase.noted.feature.note.domain.Note
@@ -133,6 +134,7 @@ class NoteEditorViewModelTest {
             seedNote(
                 Note(
                     id = 7L,
+                    noteId = "note-7",
                     content = NoteContentCodec.encode(
                         listOf(
                             NoteContentBlock.Text("Catatan lama"),
@@ -140,6 +142,9 @@ class NoteEditorViewModelTest {
                         ),
                     ),
                     createdAt = 123L,
+                    updatedAt = 123L,
+                    ownerUserId = null,
+                    syncStatus = LocalSyncStatus.LOCAL_ONLY,
                 ),
             )
         }
@@ -161,8 +166,12 @@ class NoteEditorViewModelTest {
             seedNote(
                 Note(
                     id = 19L,
+                    noteId = "note-19",
                     content = NoteContentCodec.encode(listOf(NoteContentBlock.Text("Draft"))),
                     createdAt = 222L,
+                    updatedAt = 222L,
+                    ownerUserId = null,
+                    syncStatus = LocalSyncStatus.LOCAL_ONLY,
                 ),
             )
         }
@@ -385,8 +394,12 @@ private class FakeNoteRepository(
         insertedContents += content
         val inserted = Note(
             id = notesFlow.value.size.toLong() + 1,
+            noteId = "note-${notesFlow.value.size + 1}",
             content = content,
             createdAt = 10_000,
+            updatedAt = 10_000,
+            ownerUserId = null,
+            syncStatus = LocalSyncStatus.LOCAL_ONLY,
         )
         notesFlow.value = listOf(inserted) + notesFlow.value
         return inserted
@@ -404,6 +417,15 @@ private class FakeNoteRepository(
             if (note.id == noteId) updated else note
         }
         return updated
+    }
+
+    override suspend fun deleteNote(noteId: Long): Boolean {
+        val exists = notesFlow.value.any { it.id == noteId }
+        if (!exists) {
+            return false
+        }
+        notesFlow.value = notesFlow.value.filterNot { it.id == noteId }
+        return true
     }
 
     fun seedNote(note: Note) {

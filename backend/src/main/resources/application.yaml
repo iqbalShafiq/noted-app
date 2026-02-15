@@ -1,0 +1,23 @@
+ktor:
+  application:
+    modules:
+      - id.usecase.ApplicationKt.module
+  deployment:
+    port: 8080
+
+storage:
+  mode: postgres
+
+postgres:
+  jdbcUrl: "jdbc:postgresql://localhost:5433/noted"
+  username: "noted_user"
+  password: "noted_password"
+  maximumPoolSize: 8
+
+auth:
+  jwt:
+    issuer: "noted-backend"
+    audience: "noted-app"
+    realm: "noted"
+    secret: "noted-dev-super-secret-key-change-me"
+    expiresInSeconds: 86400

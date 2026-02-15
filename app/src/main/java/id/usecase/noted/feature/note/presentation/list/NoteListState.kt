@@ -1,9 +1,14 @@
 package id.usecase.noted.feature.note.presentation.list
 
+import id.usecase.noted.feature.note.data.sync.NoteSyncStatus
+
 data class NoteListState(
     val isLoading: Boolean = true,
     val errorMessage: String? = null,
     val notes: List<NoteListItemUi> = emptyList(),
+    val syncStatus: NoteSyncStatus = NoteSyncStatus(),
+    val loginInput: String = "",
+    val passwordInput: String = "",
 )
 
 data class NoteListItemUi(

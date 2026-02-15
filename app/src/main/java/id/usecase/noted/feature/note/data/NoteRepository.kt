@@ -11,4 +11,6 @@ interface NoteRepository {
     suspend fun addNote(content: String): Note
 
     suspend fun updateNote(noteId: Long, content: String): Note?
+
+    suspend fun deleteNote(noteId: Long): Boolean
 }

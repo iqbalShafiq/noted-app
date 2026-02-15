@@ -37,7 +37,10 @@ fun NoteNavigation(
         NoteRepositoryProvider.provide(applicationContext)
     }
     val listViewModel: NoteListViewModel = viewModel(
-        factory = NoteListViewModel.factory(noteRepository),
+        factory = NoteListViewModel.factory(
+            noteRepository = noteRepository,
+            noteSyncCoordinator = noteRepository,
+        ),
     )
     val editorViewModel: NoteEditorViewModel = viewModel(
         factory = NoteEditorViewModel.factory(noteRepository),
