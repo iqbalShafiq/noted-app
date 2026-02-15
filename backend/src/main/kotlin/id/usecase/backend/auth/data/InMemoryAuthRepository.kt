@@ -44,4 +44,18 @@ class InMemoryAuthRepository : AuthRepository {
             usersById[userId]
         }
     }
+
+    override suspend fun updatePasswordHashByUsername(username: String, passwordHash: String): AuthUser {
+        return mutex.withLock {
+            val normalizedUsername = username.lowercase()
+            val userId = userIdByUsername[normalizedUsername]
+                ?: throw IllegalArgumentException("Username tidak ditemukan")
+            val current = usersById[userId]
+                ?: throw IllegalStateException("Auth user mapping is inconsistent")
+
+            val updated = current.copy(passwordHash = passwordHash)
+            usersById[userId] = updated
+            updated
+        }
+    }
 }

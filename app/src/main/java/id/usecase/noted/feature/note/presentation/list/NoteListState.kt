@@ -7,8 +7,6 @@ data class NoteListState(
     val errorMessage: String? = null,
     val notes: List<NoteListItemUi> = emptyList(),
     val syncStatus: NoteSyncStatus = NoteSyncStatus(),
-    val loginInput: String = "",
-    val passwordInput: String = "",
 )
 
 data class NoteListItemUi(

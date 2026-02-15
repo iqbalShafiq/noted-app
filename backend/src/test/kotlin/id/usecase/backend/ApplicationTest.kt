@@ -1,5 +1,7 @@
 package id.usecase.backend
 
+import id.usecase.noted.shared.auth.AuthForgotPasswordRequest
+import id.usecase.noted.shared.auth.AuthForgotPasswordResponse
 import id.usecase.noted.shared.auth.AuthLoginRequest
 import id.usecase.noted.shared.auth.AuthRegisterRequest
 import id.usecase.noted.shared.auth.AuthResponse
@@ -182,6 +184,46 @@ class ApplicationTest {
         val auth = json.decodeFromString<AuthResponse>(loginResponse.bodyAsText())
         assertTrue(auth.accessToken.isNotBlank())
         assertEquals("tester-login", auth.username)
+    }
+
+    @Test
+    fun testForgotPasswordEndpointResetsCredentials() = testApplication {
+        application {
+            module(storageModeOverride = "memory")
+        }
+
+        val registerResponse = client.post("/api/auth/register") {
+            contentType(ContentType.Application.Json)
+            setBody(json.encodeToString(AuthRegisterRequest("tester-forgot", "password123")))
+        }
+        assertEquals(HttpStatusCode.Created, registerResponse.status)
+
+        val forgotResponse = client.post("/api/auth/forgot-password") {
+            contentType(ContentType.Application.Json)
+            setBody(
+                json.encodeToString(
+                    AuthForgotPasswordRequest(
+                        username = "tester-forgot",
+                        newPassword = "password456",
+                    ),
+                ),
+            )
+        }
+        assertEquals(HttpStatusCode.OK, forgotResponse.status)
+        val forgotBody = json.decodeFromString<AuthForgotPasswordResponse>(forgotResponse.bodyAsText())
+        assertEquals("tester-forgot", forgotBody.username)
+
+        val oldPasswordLogin = client.post("/api/auth/login") {
+            contentType(ContentType.Application.Json)
+            setBody(json.encodeToString(AuthLoginRequest("tester-forgot", "password123")))
+        }
+        assertEquals(HttpStatusCode.BadRequest, oldPasswordLogin.status)
+
+        val newPasswordLogin = client.post("/api/auth/login") {
+            contentType(ContentType.Application.Json)
+            setBody(json.encodeToString(AuthLoginRequest("tester-forgot", "password456")))
+        }
+        assertEquals(HttpStatusCode.OK, newPasswordLogin.status)
     }
 
     private suspend fun ApplicationTestBuilder.registerAndLogin(

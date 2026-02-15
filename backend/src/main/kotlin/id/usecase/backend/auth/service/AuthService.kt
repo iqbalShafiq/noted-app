@@ -2,6 +2,8 @@ package id.usecase.backend.auth.service
 
 import id.usecase.backend.auth.domain.AuthRepository
 import id.usecase.backend.auth.security.JwtService
+import id.usecase.noted.shared.auth.AuthForgotPasswordRequest
+import id.usecase.noted.shared.auth.AuthForgotPasswordResponse
 import id.usecase.noted.shared.auth.AuthLoginRequest
 import id.usecase.noted.shared.auth.AuthRegisterRequest
 import id.usecase.noted.shared.auth.AuthResponse
@@ -68,6 +70,27 @@ class AuthService(
             username = user.username,
             accessToken = token,
             expiresInSeconds = jwtService.expiresInSeconds,
+        )
+    }
+
+    suspend fun forgotPassword(request: AuthForgotPasswordRequest): AuthForgotPasswordResponse {
+        val username = request.username.trim().lowercase()
+        val newPassword = request.newPassword
+
+        require(username.length >= 3) { "Username minimal 3 karakter" }
+        require(newPassword.length >= 8) { "Password baru minimal 8 karakter" }
+
+        val newPasswordHash = BCrypt.hashpw(newPassword, BCrypt.gensalt())
+        val updatedUser = authRepository.updatePasswordHashByUsername(
+            username = username,
+            passwordHash = newPasswordHash,
+        )
+
+        logger.info("auth.forgot-password success userId={} username={}", updatedUser.userId, updatedUser.username)
+
+        return AuthForgotPasswordResponse(
+            username = updatedUser.username,
+            message = "Password berhasil diperbarui. Silakan login ulang.",
         )
     }
 }

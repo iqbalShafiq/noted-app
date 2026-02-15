@@ -13,4 +13,6 @@ interface AuthRepository {
     suspend fun findByUsername(username: String): AuthUser?
 
     suspend fun findById(userId: String): AuthUser?
+
+    suspend fun updatePasswordHashByUsername(username: String, passwordHash: String): AuthUser
 }

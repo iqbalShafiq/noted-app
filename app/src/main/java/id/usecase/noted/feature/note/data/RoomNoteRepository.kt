@@ -212,6 +212,26 @@ class RoomNoteRepository(
         )
     }
 
+    override suspend fun forgotPassword(username: String, newPassword: String) {
+        if (!networkMonitor.isCurrentlyOnline()) {
+            throw IllegalStateException("Tidak ada koneksi internet")
+        }
+
+        val message = executeWithRetry(operationName = "forgot-password") {
+            authApi.forgotPassword(
+                username = username.trim(),
+                newPassword = newPassword,
+            )
+        }
+
+        _syncStatus.update { current ->
+            current.copy(
+                lastErrorMessage = null,
+                lastEventMessage = message,
+            )
+        }
+    }
+
     override suspend fun signOut() {
         sessionStore.signOut()
         _syncStatus.update { current ->

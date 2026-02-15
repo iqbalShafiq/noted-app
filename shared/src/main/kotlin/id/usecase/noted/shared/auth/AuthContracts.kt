@@ -15,6 +15,18 @@ data class AuthLoginRequest(
 )
 
 @Serializable
+data class AuthForgotPasswordRequest(
+    val username: String,
+    val newPassword: String,
+)
+
+@Serializable
+data class AuthForgotPasswordResponse(
+    val username: String,
+    val message: String,
+)
+
+@Serializable
 data class AuthResponse(
     val userId: String,
     val username: String,

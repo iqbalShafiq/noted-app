@@ -1,5 +1,7 @@
 package id.usecase.noted.feature.note.data.sync
 
+import id.usecase.noted.shared.auth.AuthForgotPasswordRequest
+import id.usecase.noted.shared.auth.AuthForgotPasswordResponse
 import id.usecase.noted.shared.auth.AuthLoginRequest
 import id.usecase.noted.shared.auth.AuthRegisterRequest
 import id.usecase.noted.shared.auth.AuthResponse
@@ -32,5 +34,21 @@ class KtorAuthApi(
             }
             setBody(AuthLoginRequest(username = username, password = password))
         }.body()
+    }
+
+    override suspend fun forgotPassword(username: String, newPassword: String): String {
+        val response: AuthForgotPasswordResponse = httpClient.post {
+            url {
+                takeFrom(baseUrl)
+                appendPathSegments("api", "auth", "forgot-password")
+            }
+            setBody(
+                AuthForgotPasswordRequest(
+                    username = username,
+                    newPassword = newPassword,
+                ),
+            )
+        }.body()
+        return response.message
     }
 }

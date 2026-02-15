@@ -6,4 +6,6 @@ interface AuthApi {
     suspend fun register(username: String, password: String): AuthResponse
 
     suspend fun login(username: String, password: String): AuthResponse
+
+    suspend fun forgotPassword(username: String, newPassword: String): String
 }

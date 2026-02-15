@@ -11,6 +11,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import id.usecase.noted.feature.auth.presentation.AuthForgotPasswordScreenRoot
+import id.usecase.noted.feature.auth.presentation.AuthLoginScreenRoot
+import id.usecase.noted.feature.auth.presentation.AuthRegisterScreenRoot
+import id.usecase.noted.feature.auth.presentation.AuthViewModel
 import id.usecase.noted.feature.note.presentation.editor.NoteEditorIntent
 import id.usecase.noted.feature.note.presentation.editor.NoteEditorScreenRoot
 import id.usecase.noted.feature.note.presentation.editor.NoteEditorViewModel
@@ -32,6 +36,7 @@ fun NoteNavigation(
 ) {
     val listViewModel: NoteListViewModel = koinViewModel()
     val editorViewModel: NoteEditorViewModel = koinViewModel()
+    val authViewModel: AuthViewModel = koinViewModel()
     val backStack = rememberNavBackStack(NoteListNavKey)
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
@@ -67,12 +72,72 @@ fun NoteNavigation(
                     NoteListScreenRoot(
                         viewModel = listViewModel,
                         onShowMessage = ::showMessage,
+                        onNavigateToAuth = {
+                            if (backStack.lastOrNull() != AuthLoginNavKey) {
+                                backStack.add(AuthLoginNavKey)
+                            }
+                        },
                         onNavigateToEditor = { noteId ->
                             editorViewModel.onIntent(NoteEditorIntent.EditorOpened(noteId))
                             moveToRootDestination(
                                 backStack = backStack,
                                 destination = NoteEditorNavKey(noteId = noteId),
                             )
+                        },
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                }
+                entry<AuthLoginNavKey> {
+                    AuthLoginScreenRoot(
+                        viewModel = authViewModel,
+                        onShowMessage = ::showMessage,
+                        onNavigateBack = {
+                            backStack.removeLastOrNull()
+                            if (backStack.isEmpty()) {
+                                backStack.add(NoteListNavKey)
+                            }
+                        },
+                        onNavigateToRegister = {
+                            if (backStack.lastOrNull() != AuthRegisterNavKey) {
+                                backStack.add(AuthRegisterNavKey)
+                            }
+                        },
+                        onNavigateToForgotPassword = {
+                            if (backStack.lastOrNull() != AuthForgotPasswordNavKey) {
+                                backStack.add(AuthForgotPasswordNavKey)
+                            }
+                        },
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                }
+                entry<AuthRegisterNavKey> {
+                    AuthRegisterScreenRoot(
+                        viewModel = authViewModel,
+                        onShowMessage = ::showMessage,
+                        onNavigateBack = {
+                            backStack.removeLastOrNull()
+                            if (backStack.isEmpty()) {
+                                backStack.add(NoteListNavKey)
+                            }
+                        },
+                        onNavigateToLogin = {
+                            moveToAuthLoginDestination(backStack)
+                        },
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                }
+                entry<AuthForgotPasswordNavKey> {
+                    AuthForgotPasswordScreenRoot(
+                        viewModel = authViewModel,
+                        onShowMessage = ::showMessage,
+                        onNavigateBack = {
+                            backStack.removeLastOrNull()
+                            if (backStack.isEmpty()) {
+                                backStack.add(NoteListNavKey)
+                            }
+                        },
+                        onNavigateToLogin = {
+                            moveToAuthLoginDestination(backStack)
                         },
                         modifier = Modifier.fillMaxSize(),
                     )
@@ -154,4 +219,18 @@ private fun moveToRootDestination(
 
     backStack.clear()
     backStack.add(destination)
+}
+
+private fun moveToAuthLoginDestination(backStack: NavBackStack<NavKey>) {
+    if (backStack.lastOrNull() == AuthLoginNavKey) {
+        return
+    }
+
+    if (backStack.lastOrNull() == AuthRegisterNavKey || backStack.lastOrNull() == AuthForgotPasswordNavKey) {
+        backStack.removeLastOrNull()
+    }
+
+    if (backStack.lastOrNull() != AuthLoginNavKey) {
+        backStack.add(AuthLoginNavKey)
+    }
 }

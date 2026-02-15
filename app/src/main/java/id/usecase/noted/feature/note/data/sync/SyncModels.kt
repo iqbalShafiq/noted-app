@@ -34,6 +34,8 @@ interface NoteSyncCoordinator {
 
     suspend fun login(username: String, password: String)
 
+    suspend fun forgotPassword(username: String, newPassword: String)
+
     suspend fun signOut()
 
     suspend fun syncNow()

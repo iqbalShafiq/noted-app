@@ -1,6 +1,7 @@
 package id.usecase.backend.auth.presentation
 
 import id.usecase.backend.auth.service.AuthService
+import id.usecase.noted.shared.auth.AuthForgotPasswordRequest
 import id.usecase.noted.shared.auth.AuthLoginRequest
 import id.usecase.noted.shared.auth.AuthRegisterRequest
 import io.ktor.http.HttpStatusCode
@@ -21,6 +22,12 @@ fun Route.registerAuthRoutes(authService: AuthService) {
         post("/login") {
             val request = call.receive<AuthLoginRequest>()
             val response = authService.login(request)
+            call.respond(HttpStatusCode.OK, response)
+        }
+
+        post("/forgot-password") {
+            val request = call.receive<AuthForgotPasswordRequest>()
+            val response = authService.forgotPassword(request)
             call.respond(HttpStatusCode.OK, response)
         }
     }

@@ -5,11 +5,9 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.Button
@@ -23,7 +21,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -46,6 +43,7 @@ fun NoteListScreenRoot(
     viewModel: NoteListViewModel,
     onShowMessage: (String) -> Unit,
     onNavigateToEditor: (Long?) -> Unit,
+    onNavigateToAuth: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -54,6 +52,7 @@ fun NoteListScreenRoot(
         viewModel.effect.collect { effect ->
             when (effect) {
                 is NoteListEffect.NavigateToEditor -> onNavigateToEditor(effect.noteId)
+                NoteListEffect.NavigateToAuth -> onNavigateToAuth()
                 is NoteListEffect.ShowMessage -> onShowMessage(effect.message)
             }
         }
@@ -85,17 +84,7 @@ fun NoteListScreen(
         ) {
             SyncStatusCard(
                 syncStatus = state.syncStatus,
-                loginInput = state.loginInput,
-                passwordInput = state.passwordInput,
-                onLoginInputChanged = { value ->
-                    onIntent(NoteListIntent.LoginInputChanged(value))
-                },
-                onPasswordInputChanged = { value ->
-                    onIntent(NoteListIntent.PasswordInputChanged(value))
-                },
-                onLoginClicked = { onIntent(NoteListIntent.LoginSubmitClicked) },
-                onRegisterClicked = { onIntent(NoteListIntent.RegisterSubmitClicked) },
-                onLogoutClicked = { onIntent(NoteListIntent.LogoutClicked) },
+                onAuthClicked = { onIntent(NoteListIntent.AuthClicked) },
                 onSyncClicked = { onIntent(NoteListIntent.SyncNowClicked) },
                 onUploadClicked = { onIntent(NoteListIntent.UploadNowClicked) },
                 onImportClicked = { onIntent(NoteListIntent.ImportNowClicked) },
@@ -191,13 +180,7 @@ fun NoteListScreen(
 @Composable
 private fun SyncStatusCard(
     syncStatus: NoteSyncStatus,
-    loginInput: String,
-    passwordInput: String,
-    onLoginInputChanged: (String) -> Unit,
-    onPasswordInputChanged: (String) -> Unit,
-    onLoginClicked: () -> Unit,
-    onRegisterClicked: () -> Unit,
-    onLogoutClicked: () -> Unit,
+    onAuthClicked: () -> Unit,
     onSyncClicked: () -> Unit,
     onUploadClicked: () -> Unit,
     onImportClicked: () -> Unit,
@@ -270,33 +253,16 @@ private fun SyncStatusCard(
             }
 
             if (!syncStatus.isLoggedIn) {
-                OutlinedTextField(
-                    value = loginInput,
-                    onValueChange = onLoginInputChanged,
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true,
-                    label = { Text("Username") },
+                Text(
+                    text = "Masuk ke akun untuk sinkronisasi cloud, registrasi, atau reset password.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                OutlinedTextField(
-                    value = passwordInput,
-                    onValueChange = onPasswordInputChanged,
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true,
-                    label = { Text("Password") },
-                )
-                Button(
-                    onClick = onLoginClicked,
-                    enabled = loginInput.isNotBlank() && passwordInput.length >= 8,
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Text("Login")
-                }
                 OutlinedButton(
-                    onClick = onRegisterClicked,
-                    enabled = loginInput.isNotBlank() && passwordInput.length >= 8,
+                    onClick = onAuthClicked,
                     modifier = Modifier.fillMaxWidth(),
                 ) {
-                    Text("Daftar Akun Baru")
+                    Text("Buka Login / Register")
                 }
             } else {
                 Column(
@@ -324,13 +290,12 @@ private fun SyncStatusCard(
                     ) {
                         Text("Import dari Server")
                     }
-                    Spacer(modifier = Modifier.height(2.dp))
                     OutlinedButton(
-                        onClick = onLogoutClicked,
+                        onClick = onAuthClicked,
                         enabled = !syncStatus.isSyncing,
                         modifier = Modifier.fillMaxWidth(),
                     ) {
-                        Text("Logout")
+                        Text("Kelola Akun (Login/Logout)")
                     }
                 }
             }

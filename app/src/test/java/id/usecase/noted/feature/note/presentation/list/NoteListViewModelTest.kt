@@ -74,18 +74,16 @@ class NoteListViewModelTest {
     }
 
     @Test
-    fun loginSubmitCallsLogin() = runTest {
+    fun authClickedEmitsNavigateToAuthEffect() = runTest {
         val repository = FakeListRepository()
         val syncCoordinator = FakeSyncCoordinator()
         val viewModel = NoteListViewModel(repository, syncCoordinator)
+        val firstEffect = async { viewModel.effect.first() }
 
-        viewModel.onIntent(NoteListIntent.LoginInputChanged("qa-user"))
-        viewModel.onIntent(NoteListIntent.PasswordInputChanged("password123"))
-        viewModel.onIntent(NoteListIntent.LoginSubmitClicked)
+        viewModel.onIntent(NoteListIntent.AuthClicked)
         advanceUntilIdle()
 
-        assertEquals("qa-user", syncCoordinator.lastLoginUsername)
-        assertEquals("password123", syncCoordinator.lastLoginPassword)
+        assertEquals(NoteListEffect.NavigateToAuth, firstEffect.await())
     }
 }
 
@@ -141,20 +139,11 @@ private class FakeSyncCoordinator : NoteSyncCoordinator {
     override val session: StateFlow<UserSession> = MutableStateFlow(UserSession(userId = null, deviceId = "device"))
     override val syncStatus: StateFlow<NoteSyncStatus> = MutableStateFlow(NoteSyncStatus())
 
-    var lastRegisterUsername: String? = null
-    var lastRegisterPassword: String? = null
-    var lastLoginUsername: String? = null
-    var lastLoginPassword: String? = null
+    override suspend fun register(username: String, password: String) = Unit
 
-    override suspend fun register(username: String, password: String) {
-        lastRegisterUsername = username
-        lastRegisterPassword = password
-    }
+    override suspend fun login(username: String, password: String) = Unit
 
-    override suspend fun login(username: String, password: String) {
-        lastLoginUsername = username
-        lastLoginPassword = password
-    }
+    override suspend fun forgotPassword(username: String, newPassword: String) = Unit
 
     override suspend fun signOut() = Unit
 

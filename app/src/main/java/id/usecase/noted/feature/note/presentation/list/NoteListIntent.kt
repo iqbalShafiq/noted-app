@@ -9,15 +9,7 @@ sealed interface NoteListIntent {
 
     data object RetryObserve : NoteListIntent
 
-    data class LoginInputChanged(val value: String) : NoteListIntent
-
-    data class PasswordInputChanged(val value: String) : NoteListIntent
-
-    data object LoginSubmitClicked : NoteListIntent
-
-    data object RegisterSubmitClicked : NoteListIntent
-
-    data object LogoutClicked : NoteListIntent
+    data object AuthClicked : NoteListIntent
 
     data object SyncNowClicked : NoteListIntent
 

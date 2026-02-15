@@ -50,22 +50,7 @@ class NoteListViewModel(
             is NoteListIntent.NoteDeleteClicked -> deleteNote(intent.noteId)
 
             NoteListIntent.RetryObserve -> startObserveNotes()
-
-            is NoteListIntent.LoginInputChanged -> {
-                _state.update { currentState ->
-                    currentState.copy(loginInput = intent.value)
-                }
-            }
-
-            is NoteListIntent.PasswordInputChanged -> {
-                _state.update { currentState ->
-                    currentState.copy(passwordInput = intent.value)
-                }
-            }
-
-            NoteListIntent.LoginSubmitClicked -> signIn()
-            NoteListIntent.RegisterSubmitClicked -> register()
-            NoteListIntent.LogoutClicked -> signOut()
+            NoteListIntent.AuthClicked -> _effect.trySend(NoteListEffect.NavigateToAuth)
             NoteListIntent.SyncNowClicked -> syncNow()
             NoteListIntent.UploadNowClicked -> uploadNow()
             NoteListIntent.ImportNowClicked -> importNow()
@@ -114,14 +99,8 @@ class NoteListViewModel(
         syncObserveJob = viewModelScope.launch {
             noteSyncCoordinator.syncStatus.collect { syncStatus ->
                 _state.update { currentState ->
-                    val normalizedInput = if (currentState.loginInput.isBlank() && !syncStatus.userId.isNullOrBlank()) {
-                        syncStatus.userId
-                    } else {
-                        currentState.loginInput
-                    }
                     currentState.copy(
                         syncStatus = syncStatus,
-                        loginInput = normalizedInput,
                     )
                 }
             }
@@ -142,85 +121,6 @@ class NoteListViewModel(
                 _effect.trySend(
                     NoteListEffect.ShowMessage(
                         error.message ?: "Gagal menghapus note",
-                    ),
-                )
-            }
-        }
-    }
-
-    private fun register() {
-        val username = state.value.loginInput.trim()
-        val password = state.value.passwordInput
-        if (username.isBlank()) {
-            _effect.trySend(NoteListEffect.ShowMessage("Username wajib diisi"))
-            return
-        }
-        if (password.length < 8) {
-            _effect.trySend(NoteListEffect.ShowMessage("Password minimal 8 karakter"))
-            return
-        }
-
-        viewModelScope.launch {
-            runCatching {
-                noteSyncCoordinator.register(username = username, password = password)
-            }.onSuccess {
-                _state.update { currentState ->
-                    currentState.copy(passwordInput = "")
-                }
-                _effect.trySend(NoteListEffect.ShowMessage("Registrasi berhasil sebagai $username"))
-            }.onFailure { error ->
-                _effect.trySend(
-                    NoteListEffect.ShowMessage(
-                        error.message ?: "Registrasi gagal",
-                    ),
-                )
-            }
-        }
-    }
-
-    private fun signIn() {
-        val username = state.value.loginInput.trim()
-        val password = state.value.passwordInput
-        if (username.isBlank()) {
-            _effect.trySend(NoteListEffect.ShowMessage("Masukkan username terlebih dahulu"))
-            return
-        }
-        if (password.length < 8) {
-            _effect.trySend(NoteListEffect.ShowMessage("Password minimal 8 karakter"))
-            return
-        }
-
-        viewModelScope.launch {
-            runCatching {
-                noteSyncCoordinator.login(username = username, password = password)
-            }.onSuccess {
-                _state.update { currentState ->
-                    currentState.copy(passwordInput = "")
-                }
-                _effect.trySend(NoteListEffect.ShowMessage("Login sebagai $username berhasil"))
-            }.onFailure { error ->
-                _effect.trySend(
-                    NoteListEffect.ShowMessage(
-                        error.message ?: "Login gagal",
-                    ),
-                )
-            }
-        }
-    }
-
-    private fun signOut() {
-        viewModelScope.launch {
-            runCatching {
-                noteSyncCoordinator.signOut()
-            }.onSuccess {
-                _state.update { currentState ->
-                    currentState.copy(loginInput = "", passwordInput = "")
-                }
-                _effect.trySend(NoteListEffect.ShowMessage("Logout berhasil"))
-            }.onFailure { error ->
-                _effect.trySend(
-                    NoteListEffect.ShowMessage(
-                        error.message ?: "Logout gagal",
                     ),
                 )
             }

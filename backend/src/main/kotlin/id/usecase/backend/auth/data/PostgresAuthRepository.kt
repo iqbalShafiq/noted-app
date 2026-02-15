@@ -70,6 +70,22 @@ class PostgresAuthRepository(
             }
         }
     }
+
+    override suspend fun updatePasswordHashByUsername(username: String, passwordHash: String): AuthUser {
+        dataSource.connection.use { connection ->
+            connection.prepareStatement(UPDATE_PASSWORD_HASH_SQL).use { statement ->
+                statement.setString(1, passwordHash)
+                statement.setString(2, username.lowercase())
+                statement.executeQuery().use { resultSet ->
+                    if (resultSet.next()) {
+                        return resultSet.toAuthUser()
+                    }
+                }
+            }
+        }
+
+        throw IllegalArgumentException("Username tidak ditemukan")
+    }
 }
 
 private fun java.sql.ResultSet.toAuthUser(): AuthUser {
@@ -98,4 +114,11 @@ private const val SELECT_BY_ID_SQL = """
     FROM users
     WHERE user_id = ?
     LIMIT 1
+"""
+
+private const val UPDATE_PASSWORD_HASH_SQL = """
+    UPDATE users
+    SET password_hash = ?
+    WHERE username = ?
+    RETURNING user_id, username, password_hash, created_at_epoch_millis
 """

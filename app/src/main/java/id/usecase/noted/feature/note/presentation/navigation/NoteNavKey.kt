@@ -7,6 +7,15 @@ import kotlinx.serialization.Serializable
 data object NoteListNavKey : NavKey
 
 @Serializable
+data object AuthLoginNavKey : NavKey
+
+@Serializable
+data object AuthRegisterNavKey : NavKey
+
+@Serializable
+data object AuthForgotPasswordNavKey : NavKey
+
+@Serializable
 data class NoteEditorNavKey(
     val noteId: Long? = null,
 ) : NavKey
