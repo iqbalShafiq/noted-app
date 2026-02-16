@@ -215,6 +215,12 @@ private fun initializeSchema(dataSource: DataSource) {
             statement.executeUpdate(CREATE_SYNC_EVENTS_TABLE_SQL)
             statement.executeUpdate(DROP_SYNC_EVENTS_FK_SQL)
             statement.executeUpdate(CREATE_SYNC_EVENTS_OWNER_CURSOR_INDEX_SQL)
+            runCatching { statement.executeUpdate(ALTER_USERS_ADD_DISPLAY_NAME_SQL) }
+            runCatching { statement.executeUpdate(ALTER_USERS_ADD_BIO_SQL) }
+            runCatching { statement.executeUpdate(ALTER_USERS_ADD_PROFILE_PICTURE_URL_SQL) }
+            runCatching { statement.executeUpdate(ALTER_USERS_ADD_EMAIL_SQL) }
+            runCatching { statement.executeUpdate(ALTER_USERS_ADD_LAST_LOGIN_SQL) }
+            runCatching { statement.executeUpdate(ALTER_USERS_ADD_UPDATED_AT_SQL) }
         }
     }
 }
@@ -233,8 +239,44 @@ private const val CREATE_USERS_TABLE_SQL = """
         user_id TEXT PRIMARY KEY,
         username TEXT NOT NULL UNIQUE,
         password_hash TEXT NOT NULL,
-        created_at_epoch_millis BIGINT NOT NULL
+        created_at_epoch_millis BIGINT NOT NULL,
+        display_name TEXT,
+        bio TEXT,
+        profile_picture_url TEXT,
+        email TEXT,
+        last_login_at_epoch_millis BIGINT,
+        updated_at_epoch_millis BIGINT NOT NULL DEFAULT 0
     )
+"""
+
+private const val ALTER_USERS_ADD_DISPLAY_NAME_SQL = """
+    ALTER TABLE users
+    ADD COLUMN IF NOT EXISTS display_name TEXT
+"""
+
+private const val ALTER_USERS_ADD_BIO_SQL = """
+    ALTER TABLE users
+    ADD COLUMN IF NOT EXISTS bio TEXT
+"""
+
+private const val ALTER_USERS_ADD_PROFILE_PICTURE_URL_SQL = """
+    ALTER TABLE users
+    ADD COLUMN IF NOT EXISTS profile_picture_url TEXT
+"""
+
+private const val ALTER_USERS_ADD_EMAIL_SQL = """
+    ALTER TABLE users
+    ADD COLUMN IF NOT EXISTS email TEXT
+"""
+
+private const val ALTER_USERS_ADD_LAST_LOGIN_SQL = """
+    ALTER TABLE users
+    ADD COLUMN IF NOT EXISTS last_login_at_epoch_millis BIGINT
+"""
+
+private const val ALTER_USERS_ADD_UPDATED_AT_SQL = """
+    ALTER TABLE users
+    ADD COLUMN IF NOT EXISTS updated_at_epoch_millis BIGINT NOT NULL DEFAULT 0
 """
 
 private const val ALTER_NOTES_ADD_UPDATED_SQL = """
