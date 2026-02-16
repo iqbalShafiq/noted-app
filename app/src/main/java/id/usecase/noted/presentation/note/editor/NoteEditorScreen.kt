@@ -151,6 +151,14 @@ fun NoteEditorScreen(
                             contentDescription = "Tag lokasi",
                         )
                     }
+                    if (state.editingNoteId != null) {
+                        IconButton(onClick = { onIntent(NoteEditorIntent.DeleteClicked) }) {
+                            Icon(
+                                imageVector = Icons.Outlined.Delete,
+                                contentDescription = "Hapus note",
+                            )
+                        }
+                    }
                 },
                 containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
                 tonalElevation = BottomAppBarDefaults.ContainerElevation,

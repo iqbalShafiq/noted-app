@@ -243,9 +243,6 @@ fun NoteListScreen(
                                     onClick = {
                                         onIntent(NoteListIntent.NoteClicked(noteId = item.id))
                                     },
-                                    onDeleteClick = {
-                                        onIntent(NoteListIntent.NoteDeleteClicked(noteId = item.id))
-                                    },
                                 )
                             }
                         }

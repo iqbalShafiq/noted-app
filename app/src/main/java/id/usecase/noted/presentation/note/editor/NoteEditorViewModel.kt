@@ -63,6 +63,7 @@ class NoteEditorViewModel(
             }
 
             NoteEditorIntent.SaveClicked -> saveNote()
+            NoteEditorIntent.DeleteClicked -> deleteNote()
         }
     }
 
@@ -372,6 +373,40 @@ class NoteEditorViewModel(
                         error.message ?: fallbackMessage,
                     ),
                 )
+            }
+        }
+    }
+
+    private fun deleteNote() {
+        val editingNoteId = state.value.editingNoteId
+        if (editingNoteId == null) {
+            sendEffect(NoteEditorEffect.ShowMessage("Note belum disimpan"))
+            return
+        }
+
+        _state.update { currentState ->
+            currentState.copy(isSaving = true)
+        }
+
+        viewModelScope.launch {
+            runCatching {
+                noteRepository.deleteNote(editingNoteId)
+            }.onSuccess { deleted ->
+                if (deleted) {
+                    setFreshEditorState()
+                    sendEffect(NoteEditorEffect.ShowMessage("Note berhasil dihapus"))
+                    sendEffect(NoteEditorEffect.NavigateToList)
+                } else {
+                    _state.update { currentState ->
+                        currentState.copy(isSaving = false)
+                    }
+                    sendEffect(NoteEditorEffect.ShowMessage("Note tidak ditemukan"))
+                }
+            }.onFailure { error ->
+                _state.update { currentState ->
+                    currentState.copy(isSaving = false)
+                }
+                sendEffect(NoteEditorEffect.ShowMessage(error.message ?: "Gagal menghapus note"))
             }
         }
     }

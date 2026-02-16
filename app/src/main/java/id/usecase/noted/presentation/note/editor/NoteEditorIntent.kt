@@ -29,4 +29,6 @@ sealed interface NoteEditorIntent {
     ) : NoteEditorIntent
 
     data object SaveClicked : NoteEditorIntent
+
+    data object DeleteClicked : NoteEditorIntent
 }
