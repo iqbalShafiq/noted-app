@@ -78,6 +78,22 @@ class InMemoryNoteRepository : NoteRepository, NoteSyncRepository {
         }
     }
 
+    override suspend fun searchPublicNotes(query: String, excludeOwnerUserId: String, limit: Int): List<StoredNote> {
+        return mutex.withLock {
+            notesById.values
+                .asSequence()
+                .filter {
+                    it.visibility == NoteVisibility.PUBLIC &&
+                        it.ownerUserId != excludeOwnerUserId &&
+                        it.deletedAtEpochMillis == null &&
+                        it.content.contains(query, ignoreCase = true)
+                }
+                .sortedByDescending { it.createdAtEpochMillis }
+                .take(limit)
+                .toList()
+        }
+    }
+
     override suspend fun applyMutation(
         ownerUserId: String,
         mutation: SyncMutationDto,

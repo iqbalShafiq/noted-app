@@ -86,6 +86,22 @@ fun Route.registerNoteRoutes(
             call.respond(noteSharingService.exploreNotes(excludeUserId = userId, limit = limit))
         }
 
+        get("/notes/explore/search") {
+            val userId = call.requireUserId()
+            val query = call.request.queryParameters["query"]
+            val limit = call.request.queryParameters["limit"]?.toIntOrNull() ?: 50
+
+            if (query.isNullOrBlank()) {
+                call.respond(
+                    HttpStatusCode.BadRequest,
+                    ErrorResponse("query parameter is required"),
+                )
+                return@get
+            }
+
+            call.respond(noteSharingService.searchExploreNotes(query = query, excludeUserId = userId, limit = limit))
+        }
+
         post("/notes/{noteId}/history") {
             val userId = call.requireUserId()
             val noteId = call.parameters["noteId"] ?: throw IllegalArgumentException("noteId is required")

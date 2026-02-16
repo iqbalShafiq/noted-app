@@ -141,6 +141,24 @@ class PostgresNoteRepository(
         }
     }
 
+    override suspend fun searchPublicNotes(query: String, excludeOwnerUserId: String, limit: Int): List<StoredNote> {
+        dataSource.connection.use { connection ->
+            connection.prepareStatement(SEARCH_PUBLIC_NOTES_SQL).use { statement ->
+                statement.setString(1, NoteVisibility.PUBLIC.name)
+                statement.setString(2, excludeOwnerUserId)
+                statement.setString(3, "%${query}%")
+                statement.setInt(4, limit)
+                statement.executeQuery().use { resultSet ->
+                    val notes = mutableListOf<StoredNote>()
+                    while (resultSet.next()) {
+                        notes += resultSet.toStoredNote()
+                    }
+                    return notes
+                }
+            }
+        }
+    }
+
     override suspend fun applyMutation(
         ownerUserId: String,
         mutation: SyncMutationDto,
@@ -420,6 +438,14 @@ private const val SELECT_PUBLIC_NOTES_SQL = """
     SELECT id, owner_user_id, content, created_at_epoch_millis, updated_at_epoch_millis, deleted_at_epoch_millis, version, visibility
     FROM notes
     WHERE visibility = ? AND deleted_at_epoch_millis IS NULL
+    ORDER BY created_at_epoch_millis DESC
+    LIMIT ?
+"""
+
+private const val SEARCH_PUBLIC_NOTES_SQL = """
+    SELECT id, owner_user_id, content, created_at_epoch_millis, updated_at_epoch_millis, deleted_at_epoch_millis, version, visibility
+    FROM notes
+    WHERE visibility = ? AND owner_user_id != ? AND deleted_at_epoch_millis IS NULL AND content ILIKE ?
     ORDER BY created_at_epoch_millis DESC
     LIMIT ?
 """

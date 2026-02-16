@@ -34,6 +34,10 @@ class ExploreViewModel(
             ExploreIntent.LoadExploreNotes -> loadExploreNotes()
             ExploreIntent.RefreshExploreNotes -> loadExploreNotes(isRefresh = true)
             ExploreIntent.NavigateBackClicked -> _effect.trySend(ExploreEffect.NavigateBack)
+            is ExploreIntent.SearchQueryChanged -> _state.update { it.copy(searchQuery = intent.query) }
+            ExploreIntent.SearchClicked -> _state.update { it.copy(isSearchExpanded = true) }
+            ExploreIntent.DismissSearch -> _state.update { it.copy(isSearchExpanded = false, searchQuery = "") }
+            ExploreIntent.ClearSearchHistory -> _state.update { it.copy(searchHistory = emptyList()) }
         }
     }
 

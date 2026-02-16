@@ -156,6 +156,22 @@ class NoteSharingService(
             }
     }
 
+    suspend fun searchExploreNotes(query: String, excludeUserId: String, limit: Int = 50): List<NoteDto> {
+        val normalizedQuery = query.trim()
+        val normalizedUserId = excludeUserId.trim()
+        require(normalizedQuery.isNotBlank()) { "query must not be blank" }
+        require(normalizedUserId.isNotBlank()) { "excludeUserId must not be blank" }
+
+        val notes = noteRepository.searchPublicNotes(
+            query = normalizedQuery,
+            excludeOwnerUserId = normalizedUserId,
+            limit = limit,
+        )
+        return notes.map { note ->
+            note.toNoteDto(sharedWithUserIds = sharedWithUserIds(note.id))
+        }
+    }
+
     private suspend fun sharedWithUserIds(noteId: String): List<String> {
         return noteShareRepository.findByNoteId(noteId)
             .asSequence()

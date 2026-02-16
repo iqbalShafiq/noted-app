@@ -6,6 +6,7 @@ import kotlinx.coroutines.flow.flow
 
 interface ExploreRepository {
     fun exploreNotes(limit: Int = 50): Flow<Result<List<NoteDto>>>
+    fun searchExploreNotes(query: String, limit: Int = 50): Flow<Result<List<NoteDto>>>
     fun getNoteById(noteId: String): Flow<Result<NoteDto>>
 }
 
@@ -20,6 +21,18 @@ class SyncExploreRepository(
 
         runCatching {
             exploreApi.exploreNotes(accessToken = token, limit = limit)
+        }.let { result ->
+            emit(result)
+        }
+    }
+
+    override fun searchExploreNotes(query: String, limit: Int): Flow<Result<List<NoteDto>>> = flow {
+        val session = sessionStore.currentSession()
+        val token = session.accessToken
+            ?: throw IllegalStateException("Login diperlukan untuk pencarian")
+
+        runCatching {
+            exploreApi.searchExploreNotes(accessToken = token, query = query, limit = limit)
         }.let { result ->
             emit(result)
         }

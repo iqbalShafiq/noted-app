@@ -1,6 +1,5 @@
 package id.usecase.noted.presentation.note.list
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -10,13 +9,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Explore
-import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Sync
@@ -31,11 +26,8 @@ import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SearchBar
-import androidx.compose.material3.SearchBarDefaults
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
@@ -45,7 +37,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -57,6 +48,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import id.usecase.noted.presentation.components.NotedSearchBar
+import id.usecase.noted.presentation.components.SearchResultItem
 import id.usecase.noted.presentation.note.list.component.NoteHistoryListItem
 import id.usecase.noted.presentation.note.list.component.NoteListItem
 import id.usecase.noted.presentation.note.list.preview.NoteListPreviewData
@@ -255,7 +248,14 @@ fun NoteListScreen(
 
         // Material3 SearchBar overlay
         if (isSearchExpanded) {
-            ExpandedSearchBar(
+            val searchResults = when (searchSelectedTab) {
+                0 -> state.filteredMyNotes.map { SearchResultItem(id = it.id, content = it.content) }
+                1 -> state.filteredSavedNotes.map { SearchResultItem(id = it.id, content = it.content) }
+                2 -> emptyList()
+                else -> emptyList()
+            }
+
+            NotedSearchBar(
                 query = state.searchQuery,
                 onQueryChange = { onIntent(NoteListIntent.SearchQueryChanged(it)) },
                 onSearch = {
@@ -268,12 +268,7 @@ fun NoteListScreen(
                 searchHistory = emptyList(),
                 searchSelectedTab = searchSelectedTab,
                 onSearchTabSelected = { searchSelectedTab = it },
-                searchResults = when (searchSelectedTab) {
-                    0 -> state.filteredMyNotes
-                    1 -> state.filteredSavedNotes
-                    2 -> emptyList()
-                    else -> emptyList()
-                },
+                searchResults = searchResults,
                 onNoteClick = { noteId ->
                     onIntent(NoteListIntent.NoteClicked(noteId = noteId))
                     isSearchExpanded = false
@@ -328,133 +323,6 @@ private fun HistoryListContent(
                 history = item,
                 onClick = { onHistoryClick(item.id) },
             )
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun ExpandedSearchBar(
-    query: String,
-    onQueryChange: (String) -> Unit,
-    onSearch: () -> Unit,
-    onDismiss: () -> Unit,
-    searchHistory: List<String>,
-    searchSelectedTab: Int,
-    onSearchTabSelected: (Int) -> Unit,
-    searchResults: List<NoteListItemUi>,
-    onNoteClick: (Long) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    var expanded by remember { mutableStateOf(true) }
-
-    SearchBar(
-        modifier = modifier.fillMaxWidth(),
-        inputField = {
-            SearchBarDefaults.InputField(
-                query = query,
-                onQueryChange = onQueryChange,
-                onSearch = {
-                    onSearch()
-                    expanded = false
-                },
-                expanded = expanded,
-                onExpandedChange = { expanded = it },
-                placeholder = { Text("Cari note...") },
-                leadingIcon = {
-                    Icon(
-                        imageVector = Icons.Default.Search,
-                        contentDescription = null,
-                    )
-                },
-                trailingIcon = {
-                    IconButton(onClick = onDismiss) {
-                        Icon(
-                            imageVector = Icons.Default.Clear,
-                            contentDescription = "Tutup pencarian",
-                        )
-                    }
-                },
-            )
-        },
-        expanded = expanded,
-        onExpandedChange = { expanded = it },
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .verticalScroll(rememberScrollState()),
-        ) {
-            // Search History Section
-            if (searchHistory.isNotEmpty() && query.isBlank()) {
-                Text(
-                    text = "Riwayat Pencarian",
-                    style = MaterialTheme.typography.labelMedium,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                )
-                searchHistory.take(5).forEach { historyItem ->
-                    ListItem(
-                        headlineContent = { Text(historyItem) },
-                        leadingContent = {
-                            Icon(
-                                imageVector = Icons.Default.History,
-                                contentDescription = null,
-                            )
-                        },
-                        modifier = Modifier
-                            .clickable {
-                                onQueryChange(historyItem)
-                            }
-                            .fillMaxWidth(),
-                    )
-                }
-            }
-
-            // Tabs for search results
-            if (query.isNotBlank()) {
-                TabRow(
-                    selectedTabIndex = searchSelectedTab,
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    TAB_TITLES.forEachIndexed { index, title ->
-                        Tab(
-                            selected = searchSelectedTab == index,
-                            onClick = { onSearchTabSelected(index) },
-                            text = { Text(title) },
-                        )
-                    }
-                }
-
-                // Search Results
-                if (searchResults.isEmpty()) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 32.dp),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Text(
-                            text = "Tidak ada note yang cocok",
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                } else {
-                    searchResults.forEach { note ->
-                        ListItem(
-                            headlineContent = {
-                                Text(
-                                    text = note.content.take(100),
-                                    maxLines = 2,
-                                )
-                            },
-                            modifier = Modifier
-                                .clickable { onNoteClick(note.id) }
-                                .fillMaxWidth(),
-                        )
-                    }
-                }
-            }
         }
     }
 }
@@ -580,7 +448,7 @@ private fun NoteListScreenPreviewWithSearchExpanded() {
             }
 
             // Search overlay preview
-            ExpandedSearchBar(
+            NotedSearchBar(
                 query = "contoh",
                 onQueryChange = { },
                 onSearch = { },
@@ -592,7 +460,9 @@ private fun NoteListScreenPreviewWithSearchExpanded() {
                 ),
                 searchSelectedTab = 0,
                 onSearchTabSelected = { },
-                searchResults = NoteListPreviewData.withItems.filteredMyNotes,
+                searchResults = NoteListPreviewData.withItems.filteredMyNotes.map { 
+                    SearchResultItem(id = it.id, content = it.content) 
+                },
                 onNoteClick = { },
                 modifier = Modifier
                     .align(Alignment.TopCenter)

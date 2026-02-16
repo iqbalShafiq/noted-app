@@ -31,6 +31,8 @@ interface NoteRepository {
     suspend fun findAllExcludingOwner(excludeOwnerUserId: String, limit: Int = 50): List<StoredNote>
 
     suspend fun findPublicNotes(limit: Int = 50): List<StoredNote>
+
+    suspend fun searchPublicNotes(query: String, excludeOwnerUserId: String, limit: Int = 50): List<StoredNote>
 }
 
 interface NoteSyncRepository {
