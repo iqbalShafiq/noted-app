@@ -53,9 +53,58 @@ class InMemoryAuthRepository : AuthRepository {
             val current = usersById[userId]
                 ?: throw IllegalStateException("Auth user mapping is inconsistent")
 
-            val updated = current.copy(passwordHash = passwordHash)
+            val updated = current.copy(
+                passwordHash = passwordHash,
+                updatedAtEpochMillis = System.currentTimeMillis()
+            )
             usersById[userId] = updated
             updated
         }
+    }
+
+    override suspend fun updateProfile(
+        userId: String,
+        displayName: String?,
+        bio: String?,
+        profilePictureUrl: String?,
+        email: String?,
+    ): AuthUser {
+        return mutex.withLock {
+            val current = usersById[userId]
+                ?: throw IllegalArgumentException("User tidak ditemukan")
+
+            val updated = current.copy(
+                displayName = displayName,
+                bio = bio,
+                profilePictureUrl = profilePictureUrl,
+                email = email,
+                updatedAtEpochMillis = System.currentTimeMillis()
+            )
+            usersById[userId] = updated
+            updated
+        }
+    }
+
+    override suspend fun updateLastLogin(userId: String): AuthUser {
+        return mutex.withLock {
+            val current = usersById[userId]
+                ?: throw IllegalArgumentException("User tidak ditemukan")
+
+            val updated = current.copy(
+                lastLoginAtEpochMillis = System.currentTimeMillis(),
+                updatedAtEpochMillis = System.currentTimeMillis()
+            )
+            usersById[userId] = updated
+            updated
+        }
+    }
+
+    override suspend fun getUserStatistics(userId: String): id.usecase.backend.auth.domain.UserStatistics {
+        return id.usecase.backend.auth.domain.UserStatistics(
+            totalNotes = 0,
+            notesShared = 0,
+            notesReceived = 0,
+            lastSyncAtEpochMillis = null
+        )
     }
 }
