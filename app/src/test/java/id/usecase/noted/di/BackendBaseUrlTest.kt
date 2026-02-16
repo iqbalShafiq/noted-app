@@ -8,7 +8,7 @@ class BackendBaseUrlTest {
     fun blankConfiguredUrlFallsBackToDefault() {
         val resolved = resolveBackendBaseUrl("   ")
 
-        assertEquals("http://10.0.2.2:8080", resolved)
+        assertEquals("http://192.168.18.145:8080", resolved)
     }
 
     @Test

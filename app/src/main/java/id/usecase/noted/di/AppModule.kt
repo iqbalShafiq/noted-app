@@ -33,7 +33,7 @@ import org.koin.android.ext.koin.androidContext
 import org.koin.core.module.dsl.viewModel
 import org.koin.dsl.module
 
-internal const val DEFAULT_BACKEND_BASE_URL = "http://10.0.2.2:8080"
+internal const val DEFAULT_BACKEND_BASE_URL = "http://192.168.18.145:8080"
 
 internal fun resolveBackendBaseUrl(configuredUrl: String): String {
     val trimmedUrl = configuredUrl.trim()

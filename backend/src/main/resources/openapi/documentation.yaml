@@ -1,0 +1,497 @@
+openapi: 3.0.3
+info:
+  title: Noted API
+  description: API documentation for Noted - A note-taking application with sync capabilities
+  version: 1.0.0
+  contact:
+    name: Noted Team
+
+servers:
+  - url: http://localhost:8080/api
+    description: Local development server
+
+security:
+  - BearerAuth: []
+
+paths:
+  /health:
+    get:
+      summary: Health check
+      description: Check if the API is running
+      security: []
+      responses:
+        '200':
+          description: API is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+
+  /auth/register:
+    post:
+      summary: Register new user
+      description: Create a new user account
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuthRegisterRequest'
+      responses:
+        '201':
+          description: User created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /auth/login:
+    post:
+      summary: Login
+      description: Authenticate user and get access token
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuthLoginRequest'
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /auth/forgot-password:
+    post:
+      summary: Forgot password
+      description: Reset user password
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuthForgotPasswordRequest'
+      responses:
+        '200':
+          description: Password reset successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthForgotPasswordResponse'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /notes:
+    get:
+      summary: Get owned notes
+      description: Retrieve all notes owned by the authenticated user
+      responses:
+        '200':
+          description: List of notes
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/NoteDto'
+
+    post:
+      summary: Create note
+      description: Create a new note
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateNoteRequest'
+      responses:
+        '201':
+          description: Note created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NoteDto'
+
+  /notes/{noteId}:
+    get:
+      summary: Get note by ID
+      description: Retrieve a specific note by its ID
+      parameters:
+        - name: noteId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Note found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NoteDto'
+        '404':
+          description: Note not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /notes/{noteId}/share:
+    post:
+      summary: Share note
+      description: Share a note with another user
+      parameters:
+        - name: noteId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ShareNoteRequest'
+      responses:
+        '201':
+          description: Note shared successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShareNoteResponse'
+        '404':
+          description: Note not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /notes/shared-with-me:
+    get:
+      summary: Get shared notes
+      description: Retrieve all notes shared with the authenticated user
+      responses:
+        '200':
+          description: List of shared notes
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/NoteDto'
+
+  /notes/explore:
+    get:
+      summary: Explore notes
+      description: Get public notes from other users
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+      responses:
+        '200':
+          description: List of public notes
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/NoteDto'
+
+  /sync/push:
+    post:
+      summary: Push sync
+      description: Push local mutations to server
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SyncPushRequest'
+      responses:
+        '200':
+          description: Sync successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SyncPushResponse'
+
+  /sync/pull:
+    get:
+      summary: Pull sync
+      description: Pull server changes since last cursor
+      parameters:
+        - name: cursor
+          in: query
+          schema:
+            type: integer
+            format: int64
+            default: 0
+      responses:
+        '200':
+          description: Sync data retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SyncPullResponse'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+
+    AuthRegisterRequest:
+      type: object
+      properties:
+        username:
+          type: string
+          minLength: 3
+          maxLength: 50
+        password:
+          type: string
+          minLength: 6
+          format: password
+      required:
+        - username
+        - password
+
+    AuthLoginRequest:
+      type: object
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+          format: password
+      required:
+        - username
+        - password
+
+    AuthForgotPasswordRequest:
+      type: object
+      properties:
+        username:
+          type: string
+        newPassword:
+          type: string
+          format: password
+          minLength: 6
+      required:
+        - username
+        - newPassword
+
+    AuthForgotPasswordResponse:
+      type: object
+      properties:
+        username:
+          type: string
+        message:
+          type: string
+
+    AuthResponse:
+      type: object
+      properties:
+        userId:
+          type: string
+        username:
+          type: string
+        accessToken:
+          type: string
+        expiresInSeconds:
+          type: integer
+          format: int64
+
+    CreateNoteRequest:
+      type: object
+      properties:
+        ownerUserId:
+          type: string
+        content:
+          type: string
+          maxLength: 10000
+      required:
+        - ownerUserId
+        - content
+
+    ShareNoteRequest:
+      type: object
+      properties:
+        recipientUserId:
+          type: string
+      required:
+        - recipientUserId
+
+    NoteDto:
+      type: object
+      properties:
+        id:
+          type: string
+        ownerUserId:
+          type: string
+        content:
+          type: string
+        createdAtEpochMillis:
+          type: integer
+          format: int64
+        sharedWithUserIds:
+          type: array
+          items:
+            type: string
+
+    ShareNoteResponse:
+      type: object
+      properties:
+        noteId:
+          type: string
+        recipientUserId:
+          type: string
+        sharedAtEpochMillis:
+          type: integer
+          format: int64
+
+    SyncPushRequest:
+      type: object
+      properties:
+        deviceId:
+          type: string
+        mutations:
+          type: array
+          items:
+            $ref: '#/components/schemas/SyncMutationDto'
+      required:
+        - deviceId
+        - mutations
+
+    SyncMutationDto:
+      type: object
+      properties:
+        operationId:
+          type: string
+        noteId:
+          type: string
+        type:
+          type: string
+          enum: [UPSERT, DELETE]
+        content:
+          type: string
+          nullable: true
+        clientUpdatedAtEpochMillis:
+          type: integer
+          format: int64
+        baseVersion:
+          type: integer
+          format: int64
+          nullable: true
+      required:
+        - operationId
+        - noteId
+        - type
+        - clientUpdatedAtEpochMillis
+
+    SyncPushResponse:
+      type: object
+      properties:
+        acceptedOperationIds:
+          type: array
+          items:
+            type: string
+        conflicts:
+          type: array
+          items:
+            $ref: '#/components/schemas/SyncConflictDto'
+        appliedNotes:
+          type: array
+          items:
+            $ref: '#/components/schemas/SyncedNoteDto'
+        cursor:
+          type: integer
+          format: int64
+
+    SyncConflictDto:
+      type: object
+      properties:
+        operationId:
+          type: string
+        noteId:
+          type: string
+        reason:
+          type: string
+        serverNote:
+          $ref: '#/components/schemas/SyncedNoteDto'
+          nullable: true
+
+    SyncPullResponse:
+      type: object
+      properties:
+        userId:
+          type: string
+        cursor:
+          type: integer
+          format: int64
+        notes:
+          type: array
+          items:
+            $ref: '#/components/schemas/SyncedNoteDto'
+
+    SyncedNoteDto:
+      type: object
+      properties:
+        noteId:
+          type: string
+        ownerUserId:
+          type: string
+        content:
+          type: string
+        createdAtEpochMillis:
+          type: integer
+          format: int64
+        updatedAtEpochMillis:
+          type: integer
+          format: int64
+        deletedAtEpochMillis:
+          type: integer
+          format: int64
+          nullable: true
+        version:
+          type: integer
+          format: int64
+        sharedWithUserIds:
+          type: array
+          items:
+            type: string
