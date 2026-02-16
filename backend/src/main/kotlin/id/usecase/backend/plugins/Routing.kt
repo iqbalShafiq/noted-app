@@ -1,11 +1,13 @@
 package id.usecase.backend.plugins
 
+import id.usecase.backend.auth.domain.AuthRepository
 import id.usecase.backend.auth.presentation.registerAuthRoutes
 import id.usecase.backend.auth.service.AuthService
 import id.usecase.backend.note.presentation.registerNoteRoutes
 import id.usecase.backend.note.service.NoteSharingService
 import id.usecase.backend.sync.presentation.registerSyncRoutes
 import id.usecase.backend.sync.service.NoteSyncService
+import id.usecase.backend.user.userRoutes
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.Application
 import io.ktor.server.application.install
@@ -22,6 +24,7 @@ fun Application.configureRouting(
     noteSharingService: NoteSharingService,
     noteSyncService: NoteSyncService,
     authService: AuthService,
+    authRepository: AuthRepository,
 ) {
     install(StatusPages) {
         exception<UnauthorizedException> { call, cause ->
@@ -60,6 +63,7 @@ fun Application.configureRouting(
             registerAuthRoutes(authService = authService)
             registerNoteRoutes(noteSharingService = noteSharingService)
             registerSyncRoutes(noteSyncService = noteSyncService)
+            userRoutes(authRepository = authRepository)
         }
     }
 }
