@@ -15,6 +15,10 @@ import id.usecase.noted.data.sync.NoteSyncApi
 import id.usecase.noted.data.sync.NoteSyncCoordinator
 import id.usecase.noted.data.sync.SessionStore
 import id.usecase.noted.data.sync.SyncExploreRepository
+import id.usecase.noted.data.user.KtorUserApi
+import id.usecase.noted.data.user.UserApi
+import id.usecase.noted.data.user.UserRepositoryImpl
+import id.usecase.noted.domain.user.UserRepository
 import id.usecase.noted.presentation.account.AccountViewModel
 import id.usecase.noted.presentation.auth.AuthViewModel
 import id.usecase.noted.presentation.note.editor.NoteEditorViewModel
@@ -89,6 +93,17 @@ val appModule = module {
             sessionStore = get(),
         )
     }
+    single<UserApi> {
+        KtorUserApi(
+            httpClient = get(),
+            baseUrl = resolveBackendBaseUrl(BuildConfig.BACKEND_BASE_URL),
+        )
+    }
+    single<UserRepository> {
+        UserRepositoryImpl(
+            userApi = get(),
+        )
+    }
     single {
         RoomNoteRepository(
             noteDao = get(),
@@ -123,7 +138,10 @@ val appModule = module {
         )
     }
     viewModel {
-        AccountViewModel(noteSyncCoordinator = get())
+        AccountViewModel(
+            noteSyncCoordinator = get(),
+            userRepository = get(),
+        )
     }
     viewModel {
         ExploreViewModel(exploreRepository = get())
