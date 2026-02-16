@@ -5,6 +5,12 @@ data class AuthUser(
     val username: String,
     val passwordHash: String,
     val createdAtEpochMillis: Long,
+    val displayName: String? = null,
+    val bio: String? = null,
+    val profilePictureUrl: String? = null,
+    val email: String? = null,
+    val lastLoginAtEpochMillis: Long? = null,
+    val updatedAtEpochMillis: Long = 0,
 )
 
 interface AuthRepository {
