@@ -56,6 +56,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import id.usecase.noted.ui.theme.NotedTheme
 import java.text.DateFormat
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -682,6 +683,76 @@ private fun formatTime(epochMillis: Long): String {
         diff < 3_600_000 -> "${diff / 60_000} menit yang lalu"
         diff < 86_400_000 -> "${diff / 3_600_000} jam yang lalu"
         else -> SimpleDateFormat("dd MMM yyyy", Locale("id", "ID")).format(Date(epochMillis))
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun AccountScreenLoggedInPreview() {
+    NotedTheme {
+        AccountScreen(
+            state = AccountState(
+                isLoading = false,
+                isLoggedIn = true,
+                username = "johndoe",
+                userId = "user-123-456",
+                displayName = "John Doe",
+                bio = "Android developer enthusiast. Love coding and coffee.",
+                profilePictureUrl = null,
+                email = "john@example.com",
+                createdAtEpochMillis = System.currentTimeMillis() - 86400000 * 30,
+                lastLoginAtEpochMillis = System.currentTimeMillis() - 3600000,
+                updatedAtEpochMillis = System.currentTimeMillis() - 86400000,
+                totalNotes = 42,
+                notesShared = 5,
+                notesReceived = 3,
+                lastSyncAtEpochMillis = System.currentTimeMillis() - 1800000,
+            ),
+            onIntent = {},
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun AccountScreenNotLoggedInPreview() {
+    NotedTheme {
+        AccountScreen(
+            state = AccountState(
+                isLoading = false,
+                isLoggedIn = false,
+            ),
+            onIntent = {},
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun AccountScreenLoadingPreview() {
+    NotedTheme {
+        AccountScreen(
+            state = AccountState(
+                isLoading = true,
+            ),
+            onIntent = {},
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun AccountScreenErrorPreview() {
+    NotedTheme {
+        AccountScreen(
+            state = AccountState(
+                isLoading = false,
+                isLoggedIn = true,
+                errorMessage = "Gagal memuat profil. Periksa koneksi internet Anda.",
+                username = "johndoe",
+            ),
+            onIntent = {},
+        )
     }
 }
 
