@@ -20,8 +20,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Email
+
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material3.BottomAppBar
+import androidx.compose.material3.BottomAppBarDefaults
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -121,6 +124,15 @@ fun AccountScreen(
                 },
             )
         },
+        bottomBar = {
+            if (state.isLoggedIn && !state.isLoading && state.errorMessage == null) {
+                AccountBottomBar(
+                    onRefresh = { onIntent(AccountIntent.RefreshProfile) },
+                    onEdit = onNavigateToEditProfile,
+                    onLogout = { showLogoutDialog = true },
+                )
+            }
+        },
         snackbarHost = { SnackbarHost(snackbarHostState) },
         modifier = modifier,
     ) { paddingValues ->
@@ -146,9 +158,6 @@ fun AccountScreen(
                 state.isLoggedIn -> {
                     LoggedInContent(
                         state = state,
-                        onIntent = onIntent,
-                        onNavigateToEditProfile = onNavigateToEditProfile,
-                        onShowLogoutDialog = { showLogoutDialog = true },
                     )
                 }
 
@@ -242,52 +251,35 @@ private fun ErrorContent(
 @Composable
 private fun LoggedInContent(
     state: AccountState,
-    onIntent: (AccountIntent) -> Unit,
-    onNavigateToEditProfile: () -> Unit,
-    onShowLogoutDialog: () -> Unit,
 ) {
-    Box(
-        modifier = Modifier.fillMaxSize(),
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 16.dp, vertical = 12.dp)
+            .padding(bottom = 24.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        // Content yang bisa di-scroll
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp, vertical = 12.dp)
-                .padding(bottom = 100.dp), // Space untuk bottom bar
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-        ) {
-            ProfileHeaderSection(
-                displayName = state.displayName,
-                username = state.username,
-                bio = state.bio,
-                email = state.email,
-                profilePictureUrl = state.profilePictureUrl,
-            )
+        ProfileHeaderSection(
+            displayName = state.displayName,
+            username = state.username,
+            bio = state.bio,
+            email = state.email,
+            profilePictureUrl = state.profilePictureUrl,
+        )
 
-            AccountInfoSection(
-                userId = state.userId,
-                createdAtEpochMillis = state.createdAtEpochMillis,
-                lastLoginAtEpochMillis = state.lastLoginAtEpochMillis,
-                updatedAtEpochMillis = state.updatedAtEpochMillis,
-            )
+        AccountInfoSection(
+            userId = state.userId,
+            createdAtEpochMillis = state.createdAtEpochMillis,
+            lastLoginAtEpochMillis = state.lastLoginAtEpochMillis,
+            updatedAtEpochMillis = state.updatedAtEpochMillis,
+        )
 
-            StatisticsSection(
-                totalNotes = state.totalNotes,
-                notesShared = state.notesShared,
-                notesReceived = state.notesReceived,
-                lastSyncAtEpochMillis = state.lastSyncAtEpochMillis,
-            )
-        }
-
-        // Bottom Bar dengan tombol
-        AccountBottomBar(
-            onRefresh = { onIntent(AccountIntent.RefreshProfile) },
-            onEdit = onNavigateToEditProfile,
-            onLogout = onShowLogoutDialog,
-            isLoading = state.isLoading,
-            modifier = Modifier.align(Alignment.BottomCenter),
+        StatisticsSection(
+            totalNotes = state.totalNotes,
+            notesShared = state.notesShared,
+            notesReceived = state.notesReceived,
+            lastSyncAtEpochMillis = state.lastSyncAtEpochMillis,
         )
     }
 }
@@ -297,66 +289,38 @@ private fun AccountBottomBar(
     onRefresh: () -> Unit,
     onEdit: () -> Unit,
     onLogout: () -> Unit,
-    isLoading: Boolean,
-    modifier: Modifier = Modifier,
 ) {
-    Card(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(16.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainer,
-        ),
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 12.dp),
-        ) {
-            // Tombol Refresh (Kiri)
-            IconButton(
-                onClick = onRefresh,
-                enabled = !isLoading,
-                modifier = Modifier.align(Alignment.CenterStart),
-            ) {
+    BottomAppBar(
+        actions = {
+            IconButton(onClick = onRefresh) {
                 Icon(
                     imageVector = Icons.Default.Refresh,
                     contentDescription = "Refresh Profil",
                 )
             }
-
-            // Tombol Edit (Tengah)
-            OutlinedButton(
-                onClick = onEdit,
-                enabled = !isLoading,
-                modifier = Modifier.align(Alignment.Center),
-            ) {
+            IconButton(onClick = onEdit) {
                 Icon(
                     imageVector = Icons.Default.Edit,
-                    contentDescription = null,
-                    modifier = Modifier.size(18.dp),
+                    contentDescription = "Edit Profil",
                 )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("Edit")
             }
-
-            // FAB Logout (Kanan)
+        },
+        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+        tonalElevation = BottomAppBarDefaults.ContainerElevation,
+        floatingActionButton = {
             FloatingActionButton(
                 onClick = onLogout,
-                modifier = Modifier
-                    .align(Alignment.CenterEnd)
-                    .size(48.dp),
                 containerColor = MaterialTheme.colorScheme.error,
                 contentColor = MaterialTheme.colorScheme.onError,
-                elevation = FloatingActionButtonDefaults.elevation(0.dp),
+                elevation = FloatingActionButtonDefaults.bottomAppBarFabElevation(),
             ) {
                 Text(
                     text = "×",
                     style = MaterialTheme.typography.headlineMedium,
                 )
             }
-        }
-    }
+        },
+    )
 }
 
 @Composable
