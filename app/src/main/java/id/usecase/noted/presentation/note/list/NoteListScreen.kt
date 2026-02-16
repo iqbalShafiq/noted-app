@@ -1,5 +1,6 @@
 package id.usecase.noted.presentation.note.list
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -9,12 +10,13 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Explore
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Sync
@@ -29,24 +31,28 @@ import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SearchBar
+import androidx.compose.material3.SearchBarDefaults
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
-import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.semantics.isTraversalGroup
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.traversalIndex
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -98,35 +104,29 @@ fun NoteListScreen(
     onIntent: (NoteListIntent) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    var isSearchActive by remember { mutableStateOf(false) }
+    var isSearchExpanded by rememberSaveable { mutableStateOf(false) }
+    var searchSelectedTab by rememberSaveable { mutableIntStateOf(0) }
 
-    Scaffold(
-        modifier = modifier.fillMaxSize(),
-        topBar = {
-            TopAppBar(
-                title = { Text("Noted") },
-                actions = {
-                    if (isSearchActive) {
-                        IconButton(onClick = {
-                            isSearchActive = false
-                            onIntent(NoteListIntent.SearchQueryChanged(""))
-                        }) {
-                            Icon(
-                                imageVector = Icons.Default.Clear,
-                                contentDescription = "Tutup pencarian",
-                            )
-                        }
-                    } else {
-                        IconButton(onClick = { isSearchActive = true }) {
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .semantics { isTraversalGroup = true },
+    ) {
+        Scaffold(
+            modifier = Modifier.fillMaxSize(),
+            topBar = {
+                TopAppBar(
+                    title = { Text("Noted") },
+                    actions = {
+                        IconButton(onClick = { isSearchExpanded = true }) {
                             Icon(
                                 imageVector = Icons.Default.Search,
                                 contentDescription = "Cari note",
                             )
                         }
-                    }
-                },
-            )
-        },
+                    },
+                )
+            },
         bottomBar = {
             BottomAppBar(
                 actions = {
@@ -181,86 +181,107 @@ fun NoteListScreen(
                 },
             )
         },
-    ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues),
-        ) {
-            TabRow(
-                selectedTabIndex = state.selectedTab,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                TAB_TITLES.forEachIndexed { index, title ->
-                    Tab(
-                        selected = state.selectedTab == index,
-                        onClick = { onIntent(NoteListIntent.TabSelected(index)) },
-                        text = { Text(title) },
-                    )
-                }
-            }
-
-            if (isSearchActive && state.selectedTab != 2) {
-                SearchBar(
-                    query = state.searchQuery,
-                    onQueryChange = { onIntent(NoteListIntent.SearchQueryChanged(it)) },
-                    onSearch = { isSearchActive = false },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
-                )
-            }
-
-            Box(
+        ) { paddingValues ->
+            Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(horizontal = 16.dp),
+                    .padding(paddingValues),
             ) {
-                when {
-                    state.isLoading -> {
-                        CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
-                    }
-
-                    state.errorMessage != null -> {
-                        ErrorState(
-                            errorMessage = state.errorMessage,
-                            onRetry = { onIntent(NoteListIntent.RetryObserve) },
-                            modifier = Modifier.align(Alignment.Center),
+                TabRow(
+                    selectedTabIndex = state.selectedTab,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    TAB_TITLES.forEachIndexed { index, title ->
+                        Tab(
+                            selected = state.selectedTab == index,
+                            onClick = { onIntent(NoteListIntent.TabSelected(index)) },
+                            text = { Text(title) },
                         )
                     }
+                }
 
-                    state.isCurrentTabEmpty -> {
-                        EmptyState(
-                            selectedTab = state.selectedTab,
-                            isSearchActive = isSearchActive && state.selectedTab != 2,
-                            modifier = Modifier.align(Alignment.Center),
-                        )
-                    }
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 16.dp),
+                ) {
+                    when {
+                        state.isLoading -> {
+                            CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+                        }
 
-                    else -> {
-                        when (state.selectedTab) {
-                            0 -> NoteListContent(
-                                notes = state.filteredMyNotes,
-                                onNoteClick = { noteId ->
-                                    onIntent(NoteListIntent.NoteClicked(noteId = noteId))
-                                },
+                        state.errorMessage != null -> {
+                            ErrorState(
+                                errorMessage = state.errorMessage,
+                                onRetry = { onIntent(NoteListIntent.RetryObserve) },
+                                modifier = Modifier.align(Alignment.Center),
                             )
-                            1 -> NoteListContent(
-                                notes = state.filteredSavedNotes,
-                                onNoteClick = { noteId ->
-                                    onIntent(NoteListIntent.NoteClicked(noteId = noteId))
-                                },
+                        }
+
+                        state.isCurrentTabEmpty -> {
+                            EmptyState(
+                                selectedTab = state.selectedTab,
+                                isSearchActive = false,
+                                modifier = Modifier.align(Alignment.Center),
                             )
-                            2 -> HistoryListContent(
-                                historyNotes = state.historyNotes,
-                                onHistoryClick = { noteId ->
-                                    onIntent(NoteListIntent.HistoryNoteClicked(noteId = noteId))
-                                },
-                            )
+                        }
+
+                        else -> {
+                            when (state.selectedTab) {
+                                0 -> NoteListContent(
+                                    notes = state.filteredMyNotes,
+                                    onNoteClick = { noteId ->
+                                        onIntent(NoteListIntent.NoteClicked(noteId = noteId))
+                                    },
+                                )
+                                1 -> NoteListContent(
+                                    notes = state.filteredSavedNotes,
+                                    onNoteClick = { noteId ->
+                                        onIntent(NoteListIntent.NoteClicked(noteId = noteId))
+                                    },
+                                )
+                                2 -> HistoryListContent(
+                                    historyNotes = state.historyNotes,
+                                    onHistoryClick = { noteId ->
+                                        onIntent(NoteListIntent.HistoryNoteClicked(noteId = noteId))
+                                    },
+                                )
+                            }
                         }
                     }
                 }
             }
+        }
+
+        // Material3 SearchBar overlay
+        if (isSearchExpanded) {
+            ExpandedSearchBar(
+                query = state.searchQuery,
+                onQueryChange = { onIntent(NoteListIntent.SearchQueryChanged(it)) },
+                onSearch = {
+                    isSearchExpanded = false
+                },
+                onDismiss = {
+                    isSearchExpanded = false
+                    onIntent(NoteListIntent.SearchQueryChanged(""))
+                },
+                searchHistory = emptyList(),
+                searchSelectedTab = searchSelectedTab,
+                onSearchTabSelected = { searchSelectedTab = it },
+                searchResults = when (searchSelectedTab) {
+                    0 -> state.filteredMyNotes
+                    1 -> state.filteredSavedNotes
+                    2 -> emptyList()
+                    else -> emptyList()
+                },
+                onNoteClick = { noteId ->
+                    onIntent(NoteListIntent.NoteClicked(noteId = noteId))
+                    isSearchExpanded = false
+                },
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .semantics { traversalIndex = 0f },
+            )
         }
     }
 }
@@ -311,46 +332,131 @@ private fun HistoryListContent(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun SearchBar(
+private fun ExpandedSearchBar(
     query: String,
     onQueryChange: (String) -> Unit,
     onSearch: () -> Unit,
+    onDismiss: () -> Unit,
+    searchHistory: List<String>,
+    searchSelectedTab: Int,
+    onSearchTabSelected: (Int) -> Unit,
+    searchResults: List<NoteListItemUi>,
+    onNoteClick: (Long) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    TextField(
-        value = query,
-        onValueChange = onQueryChange,
-        modifier = modifier,
-        placeholder = { Text("Cari note...") },
-        leadingIcon = {
-            Icon(
-                imageVector = Icons.Default.Search,
-                contentDescription = null,
+    var expanded by remember { mutableStateOf(true) }
+
+    SearchBar(
+        modifier = modifier.fillMaxWidth(),
+        inputField = {
+            SearchBarDefaults.InputField(
+                query = query,
+                onQueryChange = onQueryChange,
+                onSearch = {
+                    onSearch()
+                    expanded = false
+                },
+                expanded = expanded,
+                onExpandedChange = { expanded = it },
+                placeholder = { Text("Cari note...") },
+                leadingIcon = {
+                    Icon(
+                        imageVector = Icons.Default.Search,
+                        contentDescription = null,
+                    )
+                },
+                trailingIcon = {
+                    IconButton(onClick = onDismiss) {
+                        Icon(
+                            imageVector = Icons.Default.Clear,
+                            contentDescription = "Tutup pencarian",
+                        )
+                    }
+                },
             )
         },
-        trailingIcon = {
-            if (query.isNotEmpty()) {
-                IconButton(onClick = { onQueryChange("") }) {
-                    Icon(
-                        imageVector = Icons.Default.Clear,
-                        contentDescription = "Hapus",
+        expanded = expanded,
+        onExpandedChange = { expanded = it },
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .verticalScroll(rememberScrollState()),
+        ) {
+            // Search History Section
+            if (searchHistory.isNotEmpty() && query.isBlank()) {
+                Text(
+                    text = "Riwayat Pencarian",
+                    style = MaterialTheme.typography.labelMedium,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                )
+                searchHistory.take(5).forEach { historyItem ->
+                    ListItem(
+                        headlineContent = { Text(historyItem) },
+                        leadingContent = {
+                            Icon(
+                                imageVector = Icons.Default.History,
+                                contentDescription = null,
+                            )
+                        },
+                        modifier = Modifier
+                            .clickable {
+                                onQueryChange(historyItem)
+                            }
+                            .fillMaxWidth(),
                     )
                 }
             }
-        },
-        singleLine = true,
-        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-        keyboardActions = KeyboardActions(onSearch = { onSearch() }),
-        colors = TextFieldDefaults.colors(
-            focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
-            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
-            disabledContainerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
-            focusedIndicatorColor = Color.Transparent,
-            unfocusedIndicatorColor = Color.Transparent,
-        ),
-        shape = MaterialTheme.shapes.extraLarge,
-    )
+
+            // Tabs for search results
+            if (query.isNotBlank()) {
+                TabRow(
+                    selectedTabIndex = searchSelectedTab,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    TAB_TITLES.forEachIndexed { index, title ->
+                        Tab(
+                            selected = searchSelectedTab == index,
+                            onClick = { onSearchTabSelected(index) },
+                            text = { Text(title) },
+                        )
+                    }
+                }
+
+                // Search Results
+                if (searchResults.isEmpty()) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 32.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(
+                            text = "Tidak ada note yang cocok",
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                } else {
+                    searchResults.forEach { note ->
+                        ListItem(
+                            headlineContent = {
+                                Text(
+                                    text = note.content.take(100),
+                                    maxLines = 2,
+                                )
+                            },
+                            modifier = Modifier
+                                .clickable { onNoteClick(note.id) }
+                                .fillMaxWidth(),
+                        )
+                    }
+                }
+            }
+        }
+    }
 }
 
 @Composable
@@ -440,5 +546,58 @@ private fun NoteListScreenPreviewWithPendingUpload() {
             ),
             onIntent = {},
         )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Preview(showBackground = true)
+@Composable
+private fun NoteListScreenPreviewWithSearchExpanded() {
+    NotedTheme {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .semantics { isTraversalGroup = true },
+        ) {
+            // Main screen content
+            Column {
+                TabRow(
+                    selectedTabIndex = 0,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    TAB_TITLES.forEachIndexed { index, title ->
+                        Tab(
+                            selected = index == 0,
+                            onClick = { },
+                            text = { Text(title) },
+                        )
+                    }
+                }
+                NoteListContent(
+                    notes = NoteListPreviewData.withItems.myNotes,
+                    onNoteClick = {},
+                )
+            }
+
+            // Search overlay preview
+            ExpandedSearchBar(
+                query = "contoh",
+                onQueryChange = { },
+                onSearch = { },
+                onDismiss = { },
+                searchHistory = listOf(
+                    "kotlin tutorial",
+                    "compose basics",
+                    "android development",
+                ),
+                searchSelectedTab = 0,
+                onSearchTabSelected = { },
+                searchResults = NoteListPreviewData.withItems.filteredMyNotes,
+                onNoteClick = { },
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .semantics { traversalIndex = 0f },
+            )
+        }
     }
 }
