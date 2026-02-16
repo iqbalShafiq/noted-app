@@ -58,6 +58,8 @@ class AuthService(
             throw IllegalArgumentException("Username atau password salah")
         }
 
+        authRepository.updateLastLogin(user.userId)
+
         val token = jwtService.issueToken(
             userId = user.userId,
             username = user.username,
