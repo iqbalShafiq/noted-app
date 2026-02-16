@@ -54,6 +54,7 @@ class NoteEditorViewModel(
 
             is NoteEditorIntent.PhotoPicked -> insertPhoto(intent.uri)
             is NoteEditorIntent.RemoveImageClicked -> removeImage(intent.blockId)
+            NoteEditorIntent.RemoveLocationClicked -> removeLocation()
             is NoteEditorIntent.LocationTagged -> {
                 insertLocation(
                     latitude = intent.latitude,
@@ -211,6 +212,30 @@ class NoteEditorViewModel(
         _state.update { currentState ->
             val updatedBlocks = currentState.blocks.filterNot { block ->
                 block is NoteEditorBlock.Image && block.id == blockId
+            }
+            if (updatedBlocks.size == currentState.blocks.size) {
+                return@update currentState
+            }
+
+            val normalizedBlocks = ensureContainsTextBlock(updatedBlocks)
+            val stillFocused = currentState.focusedTextBlockId
+                ?.takeIf { focusedId -> normalizedBlocks.any { block -> block.id == focusedId } }
+            val fallbackFocus = normalizedBlocks
+                .filterIsInstance<NoteEditorBlock.Text>()
+                .lastOrNull()
+                ?.id
+
+            currentState.copy(
+                blocks = normalizedBlocks,
+                focusedTextBlockId = stillFocused ?: fallbackFocus,
+            )
+        }
+    }
+
+    private fun removeLocation() {
+        _state.update { currentState ->
+            val updatedBlocks = currentState.blocks.filterNot { block ->
+                block is NoteEditorBlock.Location
             }
             if (updatedBlocks.size == currentState.blocks.size) {
                 return@update currentState

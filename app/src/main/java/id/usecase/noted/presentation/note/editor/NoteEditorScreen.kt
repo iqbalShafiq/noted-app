@@ -187,167 +187,186 @@ fun NoteEditorScreen(
                 },
             )
         },
-        ) { innerPadding ->
-        if (state.isLoadingNote) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding),
-                contentAlignment = Alignment.Center,
-            ) {
-                CircularProgressIndicator()
-            }
-            return@Scaffold
-        }
-
-        LazyColumn(
+    ) { innerPadding ->
+        Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(innerPadding)
-                .padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-            contentPadding = PaddingValues(bottom = 24.dp),
+                .padding(innerPadding),
         ) {
-            items(
-                items = state.blocks,
-                key = { block -> block.id },
-            ) { block ->
-                when (block) {
-                    is NoteEditorBlock.Text -> {
-                        TextField(
-                            value = block.value,
-                            onValueChange = { value ->
-                                onIntent(
-                                    NoteEditorIntent.TextBlockChanged(
-                                        blockId = block.id,
-                                        value = value,
-                                    ),
-                                )
-                            },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .onFocusChanged { focusState ->
-                                    if (focusState.isFocused) {
-                                        onIntent(NoteEditorIntent.TextBlockFocused(block.id))
-                                    }
+            if (state.isLoadingNote) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    CircularProgressIndicator()
+                }
+                return@Box
+            }
+
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+                contentPadding = PaddingValues(bottom = 24.dp),
+            ) {
+                items(
+                    items = state.blocks,
+                    key = { block -> block.id },
+                ) { block ->
+                    when (block) {
+                        is NoteEditorBlock.Text -> {
+                            TextField(
+                                value = block.value,
+                                onValueChange = { value ->
+                                    onIntent(
+                                        NoteEditorIntent.TextBlockChanged(
+                                            blockId = block.id,
+                                            value = value,
+                                        ),
+                                    )
                                 },
-                            placeholder = {
-                                Text("Tulis note dan tambahkan foto atau lokasi")
-                            },
-                            minLines = 2,
-                            colors = TextFieldDefaults.colors(
-                                focusedContainerColor = Color.Transparent,
-                                unfocusedContainerColor = Color.Transparent,
-                                disabledContainerColor = Color.Transparent,
-                                errorContainerColor = Color.Transparent,
-                                focusedIndicatorColor = Color.Transparent,
-                                unfocusedIndicatorColor = Color.Transparent,
-                                disabledIndicatorColor = Color.Transparent,
-                                errorIndicatorColor = Color.Transparent,
-                            ),
-                        )
-                    }
-
-                    is NoteEditorBlock.Image -> {
-                        val visibilityState = remember(block.id) {
-                            MutableTransitionState(false).apply {
-                                targetState = true
-                            }
-                        }
-
-                        AnimatedVisibility(
-                            visibleState = visibilityState,
-                            enter = fadeIn(
-                                animationSpec = spring(
-                                    stiffness = Spring.StiffnessMediumLow,
-                                    dampingRatio = Spring.DampingRatioNoBouncy,
-                                ),
-                            ) + scaleIn(
-                                initialScale = 0.98f,
-                                animationSpec = spring(
-                                    stiffness = Spring.StiffnessLow,
-                                    dampingRatio = Spring.DampingRatioNoBouncy,
-                                ),
-                            ),
-                        ) {
-                            Card(
-                                modifier = Modifier.fillMaxWidth(),
-                                colors = CardDefaults.cardColors(
-                                    containerColor = MaterialTheme.colorScheme.surfaceContainer,
-                                ),
-                            ) {
-                                Column(
-                                    modifier = Modifier.padding(8.dp),
-                                    verticalArrangement = Arrangement.spacedBy(6.dp),
-                                ) {
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.End,
-                                    ) {
-                                        IconButton(
-                                            onClick = {
-                                                onIntent(
-                                                    NoteEditorIntent.RemoveImageClicked(
-                                                        blockId = block.id,
-                                                    ),
-                                                )
-                                            },
-                                        ) {
-                                            Icon(
-                                                imageVector = Icons.Outlined.Delete,
-                                                contentDescription = "Hapus foto",
-                                            )
-                                        }
-                                    }
-                                    AsyncImage(
-                                        model = block.uri,
-                                        contentDescription = "Foto note",
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .height(220.dp),
-                                    )
-                                    Text(
-                                        text = "Foto tersisip",
-                                        style = MaterialTheme.typography.labelMedium,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
-                                }
-                            }
-                        }
-                    }
-
-                    is NoteEditorBlock.Location -> {
-                        Card(
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = CardDefaults.cardColors(
-                                containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                            ),
-                        ) {
-                            Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(12.dp),
-                                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Outlined.Place,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.onSecondaryContainer,
-                                )
-                                Column {
-                                    Text(
-                                        text = block.label,
-                                        style = MaterialTheme.typography.titleSmall,
-                                        color = MaterialTheme.colorScheme.onSecondaryContainer,
-                                    )
-                                    Text(
-                                        text = formatCoordinate(block.latitude, block.longitude),
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSecondaryContainer,
-                                    )
+                                    .onFocusChanged { focusState ->
+                                        if (focusState.isFocused) {
+                                            onIntent(NoteEditorIntent.TextBlockFocused(block.id))
+                                        }
+                                    },
+                                placeholder = {
+                                    Text("Tulis note dan tambahkan foto atau lokasi")
+                                },
+                                minLines = 2,
+                                colors = TextFieldDefaults.colors(
+                                    focusedContainerColor = Color.Transparent,
+                                    unfocusedContainerColor = Color.Transparent,
+                                    disabledContainerColor = Color.Transparent,
+                                    errorContainerColor = Color.Transparent,
+                                    focusedIndicatorColor = Color.Transparent,
+                                    unfocusedIndicatorColor = Color.Transparent,
+                                    disabledIndicatorColor = Color.Transparent,
+                                    errorIndicatorColor = Color.Transparent,
+                                ),
+                            )
+                        }
+
+                        is NoteEditorBlock.Image -> {
+                            val visibilityState = remember(block.id) {
+                                MutableTransitionState(false).apply {
+                                    targetState = true
                                 }
                             }
+
+                            AnimatedVisibility(
+                                visibleState = visibilityState,
+                                enter = fadeIn(
+                                    animationSpec = spring(
+                                        stiffness = Spring.StiffnessMediumLow,
+                                        dampingRatio = Spring.DampingRatioNoBouncy,
+                                    ),
+                                ) + scaleIn(
+                                    initialScale = 0.98f,
+                                    animationSpec = spring(
+                                        stiffness = Spring.StiffnessLow,
+                                        dampingRatio = Spring.DampingRatioNoBouncy,
+                                    ),
+                                ),
+                            ) {
+                                Card(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    colors = CardDefaults.cardColors(
+                                        containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                                    ),
+                                ) {
+                                    Column(
+                                        modifier = Modifier.padding(8.dp),
+                                        verticalArrangement = Arrangement.spacedBy(6.dp),
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.End,
+                                        ) {
+                                            IconButton(
+                                                onClick = {
+                                                    onIntent(
+                                                        NoteEditorIntent.RemoveImageClicked(
+                                                            blockId = block.id,
+                                                        ),
+                                                    )
+                                                },
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Outlined.Delete,
+                                                    contentDescription = "Hapus foto",
+                                                )
+                                            }
+                                        }
+                                        AsyncImage(
+                                            model = block.uri,
+                                            contentDescription = "Foto note",
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .height(220.dp),
+                                        )
+                                        Text(
+                                            text = "Foto tersisip",
+                                            style = MaterialTheme.typography.labelMedium,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
+                        is NoteEditorBlock.Location -> {
+                            // Location block is rendered as floating card above bottom bar
+                        }
+                    }
+                }
+            }
+
+            val locationBlock = state.blocks.filterIsInstance<NoteEditorBlock.Location>().firstOrNull()
+            if (locationBlock != null) {
+                Card(
+                    modifier = Modifier
+                        .align(Alignment.BottomStart)
+                        .padding(start = 16.dp, end = 16.dp, bottom = 16.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                    ),
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(12.dp),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.Place,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                        )
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = locationBlock.label,
+                                style = MaterialTheme.typography.titleSmall,
+                                color = MaterialTheme.colorScheme.onSecondaryContainer,
+                            )
+                            Text(
+                                text = formatCoordinate(locationBlock.latitude, locationBlock.longitude),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSecondaryContainer,
+                            )
+                        }
+                        IconButton(
+                            onClick = { onIntent(NoteEditorIntent.RemoveLocationClicked) },
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.Delete,
+                                contentDescription = "Hapus lokasi",
+                                tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                            )
                         }
                     }
                 }

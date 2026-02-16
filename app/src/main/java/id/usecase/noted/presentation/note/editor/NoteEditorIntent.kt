@@ -22,6 +22,8 @@ sealed interface NoteEditorIntent {
 
     data class RemoveImageClicked(val blockId: Long) : NoteEditorIntent
 
+    data object RemoveLocationClicked : NoteEditorIntent
+
     data class LocationTagged(
         val latitude: Double,
         val longitude: Double,
