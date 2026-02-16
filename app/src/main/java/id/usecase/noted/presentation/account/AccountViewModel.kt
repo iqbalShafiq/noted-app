@@ -4,8 +4,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import id.usecase.noted.data.sync.NoteSyncCoordinator
 import id.usecase.noted.data.sync.UserSession
-import id.usecase.noted.data.user.UserRepository
-import id.usecase.noted.shared.user.GetUserProfileResponse
+import id.usecase.noted.domain.user.UserRepository
+import id.usecase.noted.shared.user.UserProfileDto
+import id.usecase.noted.shared.user.UserStatisticsDto
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
@@ -77,47 +78,48 @@ class AccountViewModel(
                 )
             }
 
-            userRepository.getProfile().collect { result ->
-                result
-                    .onSuccess { response ->
-                        updateStateFromProfile(response)
-                    }
-                    .onFailure { error ->
-                        _state.update { currentState ->
-                            currentState.copy(
-                                errorMessage = error.message ?: "Gagal memuat profil",
-                            )
-                        }
-                        _effect.trySend(
-                            AccountEffect.ShowMessage(
-                                error.message ?: "Gagal memuat profil",
-                            ),
+            userRepository.getProfile()
+                .onSuccess { (profile, statistics) ->
+                    updateStateFromProfileAndStatistics(profile, statistics)
+                }
+                .onFailure { error ->
+                    _state.update { currentState ->
+                        currentState.copy(
+                            errorMessage = error.message ?: "Gagal memuat profil",
                         )
                     }
-
-                _state.update { currentState ->
-                    currentState.copy(isLoading = false)
+                    _effect.trySend(
+                        AccountEffect.ShowMessage(
+                            error.message ?: "Gagal memuat profil",
+                        ),
+                    )
                 }
+
+            _state.update { currentState ->
+                currentState.copy(isLoading = false)
             }
         }
     }
 
-    private fun updateStateFromProfile(response: GetUserProfileResponse) {
+    private fun updateStateFromProfileAndStatistics(
+        profile: UserProfileDto,
+        statistics: UserStatisticsDto,
+    ) {
         _state.update { currentState ->
             currentState.copy(
-                username = response.profile.username,
-                userId = response.profile.userId,
-                displayName = response.profile.displayName,
-                bio = response.profile.bio,
-                profilePictureUrl = response.profile.profilePictureUrl,
-                email = response.profile.email,
-                createdAtEpochMillis = response.profile.createdAtEpochMillis,
-                lastLoginAtEpochMillis = response.profile.lastLoginAtEpochMillis,
-                updatedAtEpochMillis = response.profile.updatedAtEpochMillis,
-                totalNotes = response.statistics.totalNotes,
-                notesShared = response.statistics.notesShared,
-                notesReceived = response.statistics.notesReceived,
-                lastSyncAtEpochMillis = response.statistics.lastSyncAtEpochMillis,
+                username = profile.username,
+                userId = profile.userId,
+                displayName = profile.displayName,
+                bio = profile.bio,
+                profilePictureUrl = profile.profilePictureUrl,
+                email = profile.email,
+                createdAtEpochMillis = profile.createdAtEpochMillis,
+                lastLoginAtEpochMillis = profile.lastLoginAtEpochMillis,
+                updatedAtEpochMillis = profile.updatedAtEpochMillis,
+                totalNotes = statistics.totalNotes,
+                notesShared = statistics.notesShared,
+                notesReceived = statistics.notesReceived,
+                lastSyncAtEpochMillis = statistics.lastSyncAtEpochMillis,
             )
         }
     }
