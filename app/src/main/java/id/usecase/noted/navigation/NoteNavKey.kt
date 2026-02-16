@@ -38,3 +38,8 @@ data object AccountNavKey : NavKey
 
 @Serializable
 data object ExploreNavKey : NavKey
+
+@Serializable
+data class NoteDetailNavKey(
+    val noteId: String,
+) : NavKey

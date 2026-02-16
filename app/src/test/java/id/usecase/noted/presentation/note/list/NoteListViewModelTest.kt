@@ -1,15 +1,14 @@
-package id.usecase.noted.feature.note.presentation.list
+package id.usecase.noted.presentation.note.list
 
+import id.usecase.noted.data.NoteHistoryRepository
 import id.usecase.noted.data.NoteRepository
 import id.usecase.noted.data.sync.LocalSyncStatus
 import id.usecase.noted.data.sync.NoteSyncCoordinator
 import id.usecase.noted.data.sync.NoteSyncStatus
 import id.usecase.noted.data.sync.UserSession
 import id.usecase.noted.domain.Note
-import id.usecase.noted.feature.note.presentation.MainDispatcherRule
-import id.usecase.noted.presentation.note.list.NoteListEffect
-import id.usecase.noted.presentation.note.list.NoteListIntent
-import id.usecase.noted.presentation.note.list.NoteListViewModel
+import id.usecase.noted.domain.NoteHistory
+import id.usecase.noted.presentation.MainDispatcherRule
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.Flow
@@ -32,8 +31,9 @@ class NoteListViewModelTest {
     @Test
     fun initCollectsNotesFromRepository() = runTest {
         val repository = FakeListRepository()
+        val historyRepository = FakeHistoryRepository()
         val syncCoordinator = FakeSyncCoordinator()
-        val viewModel = NoteListViewModel(repository, syncCoordinator)
+        val viewModel = NoteListViewModel(repository, historyRepository, syncCoordinator)
 
         repository.emit(
             listOf(
@@ -59,15 +59,16 @@ class NoteListViewModelTest {
         )
         advanceUntilIdle()
 
-        assertEquals(2, viewModel.state.value.notes.size)
-        assertEquals("Catatan rapat", viewModel.state.value.notes.first().content)
+        assertEquals(2, viewModel.state.value.myNotes.size)
+        assertEquals("Catatan rapat", viewModel.state.value.myNotes.first().content)
     }
 
     @Test
     fun addNoteClickedEmitsNavigateToEditorEffect() = runTest {
         val repository = FakeListRepository()
+        val historyRepository = FakeHistoryRepository()
         val syncCoordinator = FakeSyncCoordinator()
-        val viewModel = NoteListViewModel(repository, syncCoordinator)
+        val viewModel = NoteListViewModel(repository, historyRepository, syncCoordinator)
         val firstEffect = async { viewModel.effect.first() }
 
         viewModel.onIntent(NoteListIntent.AddNoteClicked)
@@ -79,8 +80,9 @@ class NoteListViewModelTest {
     @Test
     fun searchQueryChangedUpdatesSearchQuery() = runTest {
         val repository = FakeListRepository()
+        val historyRepository = FakeHistoryRepository()
         val syncCoordinator = FakeSyncCoordinator()
-        val viewModel = NoteListViewModel(repository, syncCoordinator)
+        val viewModel = NoteListViewModel(repository, historyRepository, syncCoordinator)
 
         viewModel.onIntent(NoteListIntent.SearchQueryChanged("test query"))
         advanceUntilIdle()
@@ -91,8 +93,9 @@ class NoteListViewModelTest {
     @Test
     fun syncClickedEmitsNavigateToSyncEffect() = runTest {
         val repository = FakeListRepository()
+        val historyRepository = FakeHistoryRepository()
         val syncCoordinator = FakeSyncCoordinator()
-        val viewModel = NoteListViewModel(repository, syncCoordinator)
+        val viewModel = NoteListViewModel(repository, historyRepository, syncCoordinator)
         val firstEffect = async { viewModel.effect.first() }
 
         viewModel.onIntent(NoteListIntent.SyncClicked)
@@ -104,8 +107,9 @@ class NoteListViewModelTest {
     @Test
     fun accountClickedEmitsNavigateToAccountEffect() = runTest {
         val repository = FakeListRepository()
+        val historyRepository = FakeHistoryRepository()
         val syncCoordinator = FakeSyncCoordinator()
-        val viewModel = NoteListViewModel(repository, syncCoordinator)
+        val viewModel = NoteListViewModel(repository, historyRepository, syncCoordinator)
         val firstEffect = async { viewModel.effect.first() }
 
         viewModel.onIntent(NoteListIntent.AccountClicked)
@@ -115,10 +119,38 @@ class NoteListViewModelTest {
     }
 
     @Test
-    fun filteredNotesFiltersByContent() = runTest {
+    fun tabSelectedUpdatesSelectedTab() = runTest {
         val repository = FakeListRepository()
+        val historyRepository = FakeHistoryRepository()
         val syncCoordinator = FakeSyncCoordinator()
-        val viewModel = NoteListViewModel(repository, syncCoordinator)
+        val viewModel = NoteListViewModel(repository, historyRepository, syncCoordinator)
+
+        viewModel.onIntent(NoteListIntent.TabSelected(1))
+        advanceUntilIdle()
+
+        assertEquals(1, viewModel.state.value.selectedTab)
+    }
+
+    @Test
+    fun historyNoteClickedEmitsNavigateToHistoryNoteEffect() = runTest {
+        val repository = FakeListRepository()
+        val historyRepository = FakeHistoryRepository()
+        val syncCoordinator = FakeSyncCoordinator()
+        val viewModel = NoteListViewModel(repository, historyRepository, syncCoordinator)
+        val firstEffect = async { viewModel.effect.first() }
+
+        viewModel.onIntent(NoteListIntent.HistoryNoteClicked("note-123"))
+        advanceUntilIdle()
+
+        assertEquals(NoteListEffect.NavigateToHistoryNote(noteId = "note-123"), firstEffect.await())
+    }
+
+    @Test
+    fun filteredMyNotesFiltersByContent() = runTest {
+        val repository = FakeListRepository()
+        val historyRepository = FakeHistoryRepository()
+        val syncCoordinator = FakeSyncCoordinator()
+        val viewModel = NoteListViewModel(repository, historyRepository, syncCoordinator)
 
         repository.emit(
             listOf(
@@ -147,15 +179,16 @@ class NoteListViewModelTest {
         viewModel.onIntent(NoteListIntent.SearchQueryChanged("rapat"))
         advanceUntilIdle()
 
-        assertEquals(1, viewModel.state.value.filteredNotes.size)
-        assertEquals("Catatan rapat project", viewModel.state.value.filteredNotes.first().content)
+        assertEquals(1, viewModel.state.value.filteredMyNotes.size)
+        assertEquals("Catatan rapat project", viewModel.state.value.filteredMyNotes.first().content)
     }
 
     @Test
-    fun filteredNotesReturnsAllWhenSearchQueryBlank() = runTest {
+    fun filteredMyNotesReturnsAllWhenSearchQueryBlank() = runTest {
         val repository = FakeListRepository()
+        val historyRepository = FakeHistoryRepository()
         val syncCoordinator = FakeSyncCoordinator()
-        val viewModel = NoteListViewModel(repository, syncCoordinator)
+        val viewModel = NoteListViewModel(repository, historyRepository, syncCoordinator)
 
         repository.emit(
             listOf(
@@ -181,7 +214,46 @@ class NoteListViewModelTest {
         )
         advanceUntilIdle()
 
-        assertEquals(2, viewModel.state.value.filteredNotes.size)
+        assertEquals(2, viewModel.state.value.filteredMyNotes.size)
+    }
+
+    @Test
+    fun savedNotesAreFilteredFromForkedNotes() = runTest {
+        val repository = FakeListRepository()
+        val historyRepository = FakeHistoryRepository()
+        val syncCoordinator = FakeSyncCoordinator()
+        val viewModel = NoteListViewModel(repository, historyRepository, syncCoordinator)
+
+        repository.emit(
+            listOf(
+                Note(
+                    id = 1,
+                    noteId = "n-1",
+                    content = "Note saya",
+                    createdAt = 1000,
+                    updatedAt = 1000,
+                    ownerUserId = "user-1",
+                    syncStatus = LocalSyncStatus.SYNCED,
+                    forkedFrom = null,
+                ),
+                Note(
+                    id = 2,
+                    noteId = "n-2",
+                    content = "Note tersimpan",
+                    createdAt = 2000,
+                    updatedAt = 2000,
+                    ownerUserId = "user-1",
+                    syncStatus = LocalSyncStatus.SYNCED,
+                    forkedFrom = "original-123",
+                ),
+            ),
+        )
+        advanceUntilIdle()
+
+        assertEquals(1, viewModel.state.value.myNotes.size)
+        assertEquals("Note saya", viewModel.state.value.myNotes.first().content)
+        assertEquals(1, viewModel.state.value.savedNotes.size)
+        assertEquals("Note tersimpan", viewModel.state.value.savedNotes.first().content)
     }
 }
 
@@ -230,6 +302,32 @@ private class FakeListRepository(
 
     fun emit(newNotes: List<Note>) {
         notes.value = newNotes
+    }
+}
+
+private class FakeHistoryRepository : NoteHistoryRepository {
+    private val history = MutableStateFlow<List<NoteHistory>>(emptyList())
+
+    override suspend fun addToHistory(noteId: String, ownerUserId: String, content: String) {
+        val newEntry = NoteHistory(
+            id = history.value.size.toLong() + 1,
+            noteId = noteId,
+            ownerUserId = ownerUserId,
+            content = content,
+            viewedAt = System.currentTimeMillis(),
+        )
+        history.value = listOf(newEntry) + history.value
+    }
+
+    override fun getHistory(limit: Int): Flow<List<NoteHistory>> = flow {
+        emitAll(history)
+    }
+
+    override suspend fun clearHistory() {
+        history.value = emptyList()
+    }
+
+    override suspend fun syncHistoryWithServer() {
     }
 }
 

@@ -10,4 +10,6 @@ data class Note(
     val updatedAt: Long,
     val ownerUserId: String?,
     val syncStatus: LocalSyncStatus,
+    val visibility: NoteVisibility = NoteVisibility.PRIVATE,
+    val forkedFrom: String? = null,
 )

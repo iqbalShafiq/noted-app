@@ -1,9 +1,9 @@
-package id.usecase.noted.feature.auth.presentation
+package id.usecase.noted.presentation.auth
 
-import id.usecase.noted.feature.note.data.sync.NoteSyncCoordinator
-import id.usecase.noted.feature.note.data.sync.NoteSyncStatus
-import id.usecase.noted.feature.note.data.sync.UserSession
-import id.usecase.noted.feature.note.presentation.MainDispatcherRule
+import id.usecase.noted.data.sync.NoteSyncCoordinator
+import id.usecase.noted.data.sync.NoteSyncStatus
+import id.usecase.noted.data.sync.UserSession
+import id.usecase.noted.presentation.MainDispatcherRule
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow

@@ -2,6 +2,7 @@ package id.usecase.backend.note.data
 
 import id.usecase.backend.note.domain.NoteRepository
 import id.usecase.backend.note.domain.NoteSyncRepository
+import id.usecase.backend.note.domain.NoteVisibility
 import id.usecase.backend.note.domain.StoredNote
 import id.usecase.backend.note.domain.SyncApplyResult
 import id.usecase.backend.note.domain.SyncApplyStatus
@@ -66,6 +67,17 @@ class InMemoryNoteRepository : NoteRepository, NoteSyncRepository {
         }
     }
 
+    override suspend fun findPublicNotes(limit: Int): List<StoredNote> {
+        return mutex.withLock {
+            notesById.values
+                .asSequence()
+                .filter { it.visibility == NoteVisibility.PUBLIC && it.deletedAtEpochMillis == null }
+                .sortedByDescending { it.createdAtEpochMillis }
+                .take(limit)
+                .toList()
+        }
+    }
+
     override suspend fun applyMutation(
         ownerUserId: String,
         mutation: SyncMutationDto,
@@ -119,6 +131,7 @@ class InMemoryNoteRepository : NoteRepository, NoteSyncRepository {
                             updatedAtEpochMillis = effectiveUpdatedAt,
                             deletedAtEpochMillis = null,
                             version = 1,
+                            visibility = existing?.visibility ?: NoteVisibility.PRIVATE,
                         )
                     } else {
                         existing.copy(
@@ -140,6 +153,7 @@ class InMemoryNoteRepository : NoteRepository, NoteSyncRepository {
                             updatedAtEpochMillis = effectiveUpdatedAt,
                             deletedAtEpochMillis = effectiveUpdatedAt,
                             version = 1,
+                            visibility = NoteVisibility.PRIVATE,
                         )
                     } else {
                         existing.copy(

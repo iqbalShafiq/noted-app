@@ -1,6 +1,8 @@
 package id.usecase.noted.di
 
 import id.usecase.noted.BuildConfig
+import id.usecase.noted.data.NoteHistoryRepository
+import id.usecase.noted.data.NoteHistoryRepositoryImpl
 import id.usecase.noted.data.NoteRepository
 import id.usecase.noted.data.RoomNoteRepository
 import id.usecase.noted.data.local.NoteDatabase
@@ -9,12 +11,15 @@ import id.usecase.noted.data.sync.ExploreApi
 import id.usecase.noted.data.sync.ExploreRepository
 import id.usecase.noted.data.sync.KtorAuthApi
 import id.usecase.noted.data.sync.KtorExploreApi
+import id.usecase.noted.data.sync.KtorNoteHistoryApi
 import id.usecase.noted.data.sync.KtorNoteSyncApi
 import id.usecase.noted.data.sync.NetworkMonitor
+import id.usecase.noted.data.sync.NoteHistoryApi
 import id.usecase.noted.data.sync.NoteSyncApi
 import id.usecase.noted.data.sync.NoteSyncCoordinator
 import id.usecase.noted.data.sync.SessionStore
 import id.usecase.noted.data.sync.SyncExploreRepository
+import id.usecase.noted.presentation.note.detail.NoteDetailViewModel
 import id.usecase.noted.data.user.KtorUserApi
 import id.usecase.noted.data.user.UserApi
 import id.usecase.noted.data.user.UserRepositoryImpl
@@ -67,6 +72,7 @@ val appModule = module {
     single { NoteDatabase.getInstance(androidContext()) }
     single { get<NoteDatabase>().noteDao() }
     single { get<NoteDatabase>().syncCursorDao() }
+    single { get<NoteDatabase>().noteHistoryDao() }
     single { SessionStore(androidContext()) }
     single { NetworkMonitor(context = androidContext(), appScope = get()) }
     single<AuthApi> {
@@ -90,6 +96,19 @@ val appModule = module {
     single<ExploreRepository> {
         SyncExploreRepository(
             exploreApi = get(),
+            sessionStore = get(),
+        )
+    }
+    single<NoteHistoryApi> {
+        KtorNoteHistoryApi(
+            httpClient = get(),
+            baseUrl = resolveBackendBaseUrl(BuildConfig.BACKEND_BASE_URL),
+        )
+    }
+    single<NoteHistoryRepository> {
+        NoteHistoryRepositoryImpl(
+            noteHistoryDao = get(),
+            noteHistoryApi = get(),
             sessionStore = get(),
         )
     }
@@ -121,6 +140,7 @@ val appModule = module {
     viewModel {
         NoteListViewModel(
             noteRepository = get(),
+            noteHistoryRepository = get(),
             noteSyncCoordinator = get(),
         )
     }
@@ -145,5 +165,14 @@ val appModule = module {
     }
     viewModel {
         ExploreViewModel(exploreRepository = get())
+    }
+    viewModel {
+        NoteDetailViewModel(
+            exploreRepository = get(),
+            noteRepository = get(),
+            noteHistoryRepository = get(),
+            sessionStore = get(),
+            context = androidContext(),
+        )
     }
 }

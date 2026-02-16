@@ -75,6 +75,15 @@ object NoteContentCodec {
         return tokens.joinToString(separator = " ").trim()
     }
 
+    fun toTitlePreview(content: String, maxLength: Int = 50): String {
+        val preview = toListPreview(content)
+        return if (preview.length <= maxLength) {
+            preview
+        } else {
+            preview.substring(0, maxLength).trimEnd() + "..."
+        }
+    }
+
     @OptIn(ExperimentalEncodingApi::class)
     private fun encodeToken(value: String): String {
         return Base64.UrlSafe.encode(value.toByteArray(Charsets.UTF_8))

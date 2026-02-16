@@ -2,6 +2,12 @@ package id.usecase.backend.note.domain
 
 import id.usecase.noted.shared.note.SyncMutationDto
 
+enum class NoteVisibility {
+    PRIVATE,
+    LINK_SHARED,
+    PUBLIC,
+}
+
 data class StoredNote(
     val id: String,
     val ownerUserId: String,
@@ -10,6 +16,7 @@ data class StoredNote(
     val updatedAtEpochMillis: Long,
     val deletedAtEpochMillis: Long? = null,
     val version: Long,
+    val visibility: NoteVisibility = NoteVisibility.PRIVATE,
 )
 
 interface NoteRepository {
@@ -22,6 +29,8 @@ interface NoteRepository {
     suspend fun findByIds(noteIds: Set<String>): List<StoredNote>
 
     suspend fun findAllExcludingOwner(excludeOwnerUserId: String, limit: Int = 50): List<StoredNote>
+
+    suspend fun findPublicNotes(limit: Int = 50): List<StoredNote>
 }
 
 interface NoteSyncRepository {

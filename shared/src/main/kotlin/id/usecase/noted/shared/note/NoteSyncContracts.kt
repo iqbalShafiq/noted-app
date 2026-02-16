@@ -57,4 +57,5 @@ data class SyncedNoteDto(
     val deletedAtEpochMillis: Long? = null,
     val version: Long,
     val sharedWithUserIds: List<String> = emptyList(),
+    val visibility: String = "PRIVATE",
 )

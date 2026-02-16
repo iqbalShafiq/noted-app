@@ -4,6 +4,7 @@ import id.usecase.backend.auth.domain.AuthRepository
 import id.usecase.backend.auth.presentation.registerAuthRoutes
 import id.usecase.backend.auth.service.AuthService
 import id.usecase.backend.note.presentation.registerNoteRoutes
+import id.usecase.backend.note.service.NoteHistoryService
 import id.usecase.backend.note.service.NoteSharingService
 import id.usecase.backend.sync.presentation.registerSyncRoutes
 import id.usecase.backend.sync.service.NoteSyncService
@@ -22,6 +23,7 @@ import io.ktor.server.routing.routing
 
 fun Application.configureRouting(
     noteSharingService: NoteSharingService,
+    noteHistoryService: NoteHistoryService,
     noteSyncService: NoteSyncService,
     authService: AuthService,
     authRepository: AuthRepository,
@@ -61,7 +63,10 @@ fun Application.configureRouting(
             }
 
             registerAuthRoutes(authService = authService)
-            registerNoteRoutes(noteSharingService = noteSharingService)
+            registerNoteRoutes(
+                noteSharingService = noteSharingService,
+                noteHistoryService = noteHistoryService,
+            )
             registerSyncRoutes(noteSyncService = noteSyncService)
             userRoutes(authRepository = authRepository)
         }

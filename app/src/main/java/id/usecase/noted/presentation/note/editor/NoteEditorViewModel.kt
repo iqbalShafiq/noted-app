@@ -1,5 +1,6 @@
 package id.usecase.noted.presentation.note.editor
 
+import android.graphics.Bitmap
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.lifecycle.ViewModel
@@ -7,6 +8,8 @@ import androidx.lifecycle.viewModelScope
 import id.usecase.noted.data.NoteRepository
 import id.usecase.noted.domain.NoteContentBlock
 import id.usecase.noted.domain.NoteContentCodec
+import id.usecase.noted.domain.NoteVisibility
+import id.usecase.noted.util.QrCodeGenerator
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -65,6 +68,11 @@ class NoteEditorViewModel(
 
             NoteEditorIntent.SaveClicked -> saveNote()
             NoteEditorIntent.DeleteClicked -> deleteNote()
+            is NoteEditorIntent.VisibilityChanged -> updateVisibility(intent.visibility)
+            NoteEditorIntent.ShareClicked -> showShareDialog()
+            NoteEditorIntent.CopyLinkClicked -> copyShareLink()
+            NoteEditorIntent.ShowQRClicked -> generateAndShowQRCode()
+            NoteEditorIntent.DismissShareDialog -> dismissShareDialog()
         }
     }
 
@@ -103,6 +111,8 @@ class NoteEditorViewModel(
                     editingNoteId = note.id,
                     isLoadingNote = false,
                     isSaving = false,
+                    visibility = note.visibility,
+                    showShareDialog = false,
                 )
             }
         }
@@ -117,6 +127,8 @@ class NoteEditorViewModel(
             editingNoteId = null,
             isLoadingNote = false,
             isSaving = false,
+            visibility = NoteVisibility.PRIVATE,
+            showShareDialog = false,
         )
     }
 
@@ -434,6 +446,61 @@ class NoteEditorViewModel(
                 sendEffect(NoteEditorEffect.ShowMessage(error.message ?: "Gagal menghapus note"))
             }
         }
+    }
+
+    private fun updateVisibility(visibility: NoteVisibility) {
+        _state.update { currentState ->
+            currentState.copy(visibility = visibility)
+        }
+    }
+
+    private fun showShareDialog() {
+        val editingNoteId = state.value.editingNoteId
+        if (editingNoteId == null) {
+            sendEffect(NoteEditorEffect.ShowMessage("Simpan note terlebih dahulu sebelum membagikan"))
+            return
+        }
+        _state.update { currentState ->
+            currentState.copy(showShareDialog = true)
+        }
+    }
+
+    private fun dismissShareDialog() {
+        _state.update { currentState ->
+            currentState.copy(showShareDialog = false)
+        }
+    }
+
+    private fun copyShareLink() {
+        val editingNoteId = state.value.editingNoteId
+        val visibility = state.value.visibility
+        if (editingNoteId == null) {
+            sendEffect(NoteEditorEffect.ShowMessage("Note belum disimpan"))
+            return
+        }
+        val link = generateShareLink(editingNoteId.toString())
+        sendEffect(NoteEditorEffect.CopyLink(link))
+        sendEffect(NoteEditorEffect.ShowMessage("Link berhasil disalin"))
+        dismissShareDialog()
+    }
+
+    private fun generateAndShowQRCode() {
+        val editingNoteId = state.value.editingNoteId
+        if (editingNoteId == null) {
+            sendEffect(NoteEditorEffect.ShowMessage("Note belum disimpan"))
+            return
+        }
+        val link = generateShareLink(editingNoteId.toString())
+        val bitmap = QrCodeGenerator.generateQrCode(link)
+        if (bitmap != null) {
+            sendEffect(NoteEditorEffect.ShowQRCode(bitmap))
+        } else {
+            sendEffect(NoteEditorEffect.ShowMessage("Gagal membuat QR code"))
+        }
+    }
+
+    private fun generateShareLink(noteId: String): String {
+        return "https://noted.usecase.id/n/$noteId"
     }
 
     private fun sendEffect(effect: NoteEditorEffect) {

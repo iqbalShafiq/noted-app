@@ -1,6 +1,7 @@
 package id.usecase.noted.presentation.note.editor
 
 import androidx.compose.ui.text.input.TextFieldValue
+import id.usecase.noted.domain.NoteVisibility
 
 sealed interface NoteEditorIntent {
     data class EditorOpened(val noteId: Long?) : NoteEditorIntent
@@ -33,4 +34,14 @@ sealed interface NoteEditorIntent {
     data object SaveClicked : NoteEditorIntent
 
     data object DeleteClicked : NoteEditorIntent
+
+    data class VisibilityChanged(val visibility: NoteVisibility) : NoteEditorIntent
+
+    data object ShareClicked : NoteEditorIntent
+
+    data object CopyLinkClicked : NoteEditorIntent
+
+    data object ShowQRClicked : NoteEditorIntent
+
+    data object DismissShareDialog : NoteEditorIntent
 }

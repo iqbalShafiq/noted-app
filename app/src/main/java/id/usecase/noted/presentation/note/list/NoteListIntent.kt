@@ -18,4 +18,8 @@ sealed interface NoteListIntent {
     data object AccountClicked : NoteListIntent
 
     data object ExploreClicked : NoteListIntent
+
+    data class TabSelected(val tabIndex: Int) : NoteListIntent
+
+    data class HistoryNoteClicked(val noteId: String) : NoteListIntent
 }

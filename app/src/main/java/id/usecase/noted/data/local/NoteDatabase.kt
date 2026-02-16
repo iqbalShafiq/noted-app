@@ -11,14 +11,17 @@ import androidx.sqlite.db.SupportSQLiteDatabase
     entities = [
         NoteEntity::class,
         SyncCursorEntity::class,
+        NoteHistoryEntity::class,
     ],
-    version = 2,
-    exportSchema = false,
+    version = 5,
+    exportSchema = true,
 )
 abstract class NoteDatabase : RoomDatabase() {
     abstract fun noteDao(): NoteDao
 
     abstract fun syncCursorDao(): SyncCursorDao
+
+    abstract fun noteHistoryDao(): NoteHistoryDao
 
     companion object {
         @Volatile
@@ -31,11 +34,41 @@ abstract class NoteDatabase : RoomDatabase() {
                     NoteDatabase::class.java,
                     "note_database",
                 )
-                    .addMigrations(MIGRATION_1_2)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
                     .build()
                     .also { built ->
                         instance = built
                     }
+            }
+        }
+
+        private val MIGRATION_4_5 = object : Migration(4, 5) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS note_history (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        note_id TEXT NOT NULL,
+                        owner_user_id TEXT NOT NULL,
+                        content TEXT NOT NULL,
+                        viewed_at INTEGER NOT NULL
+                    )
+                    """.trimIndent()
+                )
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_note_history_note_id ON note_history(note_id)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_note_history_viewed_at ON note_history(viewed_at)")
+            }
+        }
+
+        private val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE notes ADD COLUMN forked_from TEXT")
+            }
+        }
+
+        private val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE notes ADD COLUMN visibility TEXT NOT NULL DEFAULT 'PRIVATE'")
             }
         }
 

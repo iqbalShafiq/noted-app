@@ -31,6 +31,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
@@ -49,15 +51,19 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import id.usecase.noted.presentation.note.list.component.NoteHistoryListItem
 import id.usecase.noted.presentation.note.list.component.NoteListItem
 import id.usecase.noted.presentation.note.list.preview.NoteListPreviewData
 import id.usecase.noted.ui.theme.NotedTheme
+
+private val TAB_TITLES = listOf("Note Saya", "Tersimpan", "Riwayat")
 
 @Composable
 fun NoteListScreenRoot(
     viewModel: NoteListViewModel,
     onShowMessage: (String) -> Unit,
     onNavigateToEditor: (Long?) -> Unit,
+    onNavigateToNoteDetail: (String) -> Unit,
     onNavigateToSync: () -> Unit,
     onNavigateToAccount: () -> Unit,
     onNavigateToExplore: () -> Unit,
@@ -69,6 +75,7 @@ fun NoteListScreenRoot(
         viewModel.effect.collect { effect ->
             when (effect) {
                 is NoteListEffect.NavigateToEditor -> onNavigateToEditor(effect.noteId)
+                is NoteListEffect.NavigateToHistoryNote -> onNavigateToNoteDetail(effect.noteId)
                 is NoteListEffect.ShowMessage -> onShowMessage(effect.message)
                 NoteListEffect.NavigateToSync -> onNavigateToSync()
                 NoteListEffect.NavigateToAccount -> onNavigateToAccount()
@@ -159,15 +166,17 @@ fun NoteListScreen(
                     }
                 },
                 floatingActionButton = {
-                    FloatingActionButton(
-                        onClick = { onIntent(NoteListIntent.AddNoteClicked) },
-                        containerColor = BottomAppBarDefaults.bottomAppBarFabColor,
-                        elevation = FloatingActionButtonDefaults.bottomAppBarFabElevation(),
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Add,
-                            contentDescription = "Tambah Note",
-                        )
+                    if (state.selectedTab != 2) {
+                        FloatingActionButton(
+                            onClick = { onIntent(NoteListIntent.AddNoteClicked) },
+                            containerColor = BottomAppBarDefaults.bottomAppBarFabColor,
+                            elevation = FloatingActionButtonDefaults.bottomAppBarFabElevation(),
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Add,
+                                contentDescription = "Tambah Note",
+                            )
+                        }
                     }
                 },
             )
@@ -178,7 +187,20 @@ fun NoteListScreen(
                 .fillMaxSize()
                 .padding(paddingValues),
         ) {
-            if (isSearchActive) {
+            TabRow(
+                selectedTabIndex = state.selectedTab,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                TAB_TITLES.forEachIndexed { index, title ->
+                    Tab(
+                        selected = state.selectedTab == index,
+                        onClick = { onIntent(NoteListIntent.TabSelected(index)) },
+                        text = { Text(title) },
+                    )
+                }
+            }
+
+            if (isSearchActive && state.selectedTab != 2) {
                 SearchBar(
                     query = state.searchQuery,
                     onQueryChange = { onIntent(NoteListIntent.SearchQueryChanged(it)) },
@@ -200,55 +222,91 @@ fun NoteListScreen(
                     }
 
                     state.errorMessage != null -> {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .align(Alignment.Center),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(12.dp),
-                        ) {
-                            Text(
-                                text = state.errorMessage,
-                                textAlign = TextAlign.Center,
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.error,
-                            )
-                            Button(
-                                onClick = { onIntent(NoteListIntent.RetryObserve) },
-                            ) {
-                                Text("Coba Lagi")
-                            }
-                        }
+                        ErrorState(
+                            errorMessage = state.errorMessage,
+                            onRetry = { onIntent(NoteListIntent.RetryObserve) },
+                            modifier = Modifier.align(Alignment.Center),
+                        )
                     }
 
-                    state.filteredNotes.isEmpty() -> {
+                    state.isCurrentTabEmpty -> {
                         EmptyState(
-                            isSearchActive = isSearchActive,
+                            selectedTab = state.selectedTab,
+                            isSearchActive = isSearchActive && state.selectedTab != 2,
                             modifier = Modifier.align(Alignment.Center),
                         )
                     }
 
                     else -> {
-                        LazyColumn(
-                            modifier = Modifier.fillMaxSize(),
-                            verticalArrangement = Arrangement.spacedBy(8.dp),
-                            contentPadding = PaddingValues(vertical = 12.dp),
-                        ) {
-                            items(
-                                items = state.filteredNotes,
-                                key = { item -> item.id },
-                            ) { item ->
-                                NoteListItem(
-                                    note = item,
-                                    onClick = {
-                                        onIntent(NoteListIntent.NoteClicked(noteId = item.id))
-                                    },
-                                )
-                            }
+                        when (state.selectedTab) {
+                            0 -> NoteListContent(
+                                notes = state.filteredMyNotes,
+                                onNoteClick = { noteId ->
+                                    onIntent(NoteListIntent.NoteClicked(noteId = noteId))
+                                },
+                            )
+                            1 -> NoteListContent(
+                                notes = state.filteredSavedNotes,
+                                onNoteClick = { noteId ->
+                                    onIntent(NoteListIntent.NoteClicked(noteId = noteId))
+                                },
+                            )
+                            2 -> HistoryListContent(
+                                historyNotes = state.historyNotes,
+                                onHistoryClick = { noteId ->
+                                    onIntent(NoteListIntent.HistoryNoteClicked(noteId = noteId))
+                                },
+                            )
                         }
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun NoteListContent(
+    notes: List<NoteListItemUi>,
+    onNoteClick: (Long) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    LazyColumn(
+        modifier = modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+        contentPadding = PaddingValues(vertical = 12.dp),
+    ) {
+        items(
+            items = notes,
+            key = { item -> item.id },
+        ) { item ->
+            NoteListItem(
+                note = item,
+                onClick = { onNoteClick(item.id) },
+            )
+        }
+    }
+}
+
+@Composable
+private fun HistoryListContent(
+    historyNotes: List<NoteHistoryItemUi>,
+    onHistoryClick: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    LazyColumn(
+        modifier = modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+        contentPadding = PaddingValues(vertical = 12.dp),
+    ) {
+        items(
+            items = historyNotes,
+            key = { item -> item.id },
+        ) { item ->
+            NoteHistoryListItem(
+                history = item,
+                onClick = { onHistoryClick(item.id) },
+            )
         }
     }
 }
@@ -297,24 +355,54 @@ private fun SearchBar(
 
 @Composable
 private fun EmptyState(
+    selectedTab: Int,
     isSearchActive: Boolean,
     modifier: Modifier = Modifier,
 ) {
+    val message = when {
+        isSearchActive -> "Tidak ada note yang cocok dengan pencarian"
+        selectedTab == 0 -> "Belum ada note. Tekan tombol + untuk menambahkan note."
+        selectedTab == 1 -> "Belum ada note tersimpan. Jelajahi note publik untuk menyimpan."
+        selectedTab == 2 -> "Belum ada riwayat. Note yang Anda lihat akan muncul di sini."
+        else -> "Tidak ada data"
+    }
+
     Column(
         modifier = modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Text(
-            text = if (isSearchActive) {
-                "Tidak ada note yang cocok dengan pencarian"
-            } else {
-                "Belum ada note. Tekan tombol + untuk menambahkan note."
-            },
+            text = message,
             textAlign = TextAlign.Center,
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
+    }
+}
+
+@Composable
+private fun ErrorState(
+    errorMessage: String,
+    onRetry: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Text(
+            text = errorMessage,
+            textAlign = TextAlign.Center,
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.error,
+        )
+        Button(onClick = onRetry) {
+            Text("Coba Lagi")
+        }
     }
 }
 

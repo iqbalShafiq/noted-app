@@ -1,4 +1,4 @@
-package id.usecase.noted.feature.note.presentation
+package id.usecase.noted.presentation
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi

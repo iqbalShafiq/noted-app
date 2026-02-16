@@ -15,6 +15,8 @@ import id.usecase.noted.presentation.auth.AuthForgotPasswordScreenRoot
 import id.usecase.noted.presentation.auth.AuthLoginScreenRoot
 import id.usecase.noted.presentation.auth.AuthRegisterScreenRoot
 import id.usecase.noted.presentation.auth.AuthViewModel
+import id.usecase.noted.presentation.note.detail.NoteDetailScreenRoot
+import id.usecase.noted.presentation.note.detail.NoteDetailViewModel
 import id.usecase.noted.presentation.note.editor.NoteEditorIntent
 import id.usecase.noted.presentation.note.editor.NoteEditorScreenRoot
 import id.usecase.noted.presentation.note.editor.NoteEditorViewModel
@@ -28,6 +30,7 @@ import id.usecase.noted.presentation.account.AccountScreenRoot
 import id.usecase.noted.presentation.account.AccountViewModel
 import id.usecase.noted.presentation.note.explore.ExploreScreenRoot
 import id.usecase.noted.presentation.note.explore.ExploreViewModel
+import androidx.compose.runtime.LaunchedEffect
 import androidx.navigation3.runtime.NavBackStack
 import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.entryProvider
@@ -39,6 +42,8 @@ import org.koin.androidx.compose.koinViewModel
 @Composable
 fun NoteNavigation(
     modifier: Modifier = Modifier,
+    initialDeepLink: DeepLink? = null,
+    onDeepLinkConsumed: () -> Unit = {},
 ) {
     val listViewModel: NoteListViewModel = koinViewModel()
     val editorViewModel: NoteEditorViewModel = koinViewModel()
@@ -46,9 +51,23 @@ fun NoteNavigation(
     val syncViewModel: SyncViewModel = koinViewModel()
     val accountViewModel: AccountViewModel = koinViewModel()
     val exploreViewModel: ExploreViewModel = koinViewModel()
+    val noteDetailViewModel: NoteDetailViewModel = koinViewModel()
     val backStack = rememberNavBackStack(NoteListNavKey)
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
+
+    LaunchedEffect(initialDeepLink) {
+        when (val deepLink = initialDeepLink) {
+            is DeepLink.NoteDetail -> {
+                val destination = NoteDetailNavKey(noteId = deepLink.noteId)
+                if (backStack.lastOrNull() != destination) {
+                    backStack.add(destination)
+                }
+                onDeepLinkConsumed()
+            }
+            else -> { }
+        }
+    }
 
     fun showMessage(message: String) {
         coroutineScope.launch {
@@ -102,6 +121,12 @@ fun NoteNavigation(
                                 backStack = backStack,
                                 destination = NoteEditorNavKey(noteId = noteId),
                             )
+                        },
+                        onNavigateToNoteDetail = { noteId ->
+                            val destination = NoteDetailNavKey(noteId = noteId)
+                            if (backStack.lastOrNull() != destination) {
+                                backStack.add(destination)
+                            }
                         },
                         modifier = Modifier.fillMaxSize(),
                     )
@@ -263,6 +288,29 @@ fun NoteNavigation(
                             if (backStack.isEmpty()) {
                                 backStack.add(NoteListNavKey)
                             }
+                        },
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                }
+                entry<NoteDetailNavKey> { key ->
+                    LaunchedEffect(key.noteId) {
+                        noteDetailViewModel.loadNote(key.noteId)
+                    }
+                    NoteDetailScreenRoot(
+                        viewModel = noteDetailViewModel,
+                        onShowMessage = ::showMessage,
+                        onNavigateBack = {
+                            backStack.removeLastOrNull()
+                            if (backStack.isEmpty()) {
+                                backStack.add(NoteListNavKey)
+                            }
+                        },
+                        onNavigateToEditor = { localNoteId ->
+                            editorViewModel.onIntent(NoteEditorIntent.EditorOpened(localNoteId))
+                            moveToRootDestination(
+                                backStack = backStack,
+                                destination = NoteEditorNavKey(noteId = localNoteId),
+                            )
                         },
                         modifier = Modifier.fillMaxSize(),
                     )

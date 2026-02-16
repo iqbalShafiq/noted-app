@@ -8,6 +8,7 @@ import io.ktor.client.request.header
 
 interface ExploreApi {
     suspend fun exploreNotes(accessToken: String, limit: Int = 50): List<NoteDto>
+    suspend fun getNoteById(accessToken: String, noteId: String): NoteDto
 }
 
 class KtorExploreApi(
@@ -20,6 +21,12 @@ class KtorExploreApi(
             url {
                 parameters.append("limit", limit.toString())
             }
+        }.body()
+    }
+
+    override suspend fun getNoteById(accessToken: String, noteId: String): NoteDto {
+        return httpClient.get("$baseUrl/notes/$noteId") {
+            header("Authorization", "Bearer $accessToken")
         }.body()
     }
 }

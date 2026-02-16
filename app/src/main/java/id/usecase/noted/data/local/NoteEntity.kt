@@ -33,4 +33,8 @@ data class NoteEntity(
     val deletedAt: Long? = null,
     @ColumnInfo(name = "sync_error_message")
     val syncErrorMessage: String? = null,
+    @ColumnInfo(name = "visibility")
+    val visibility: String = "PRIVATE",
+    @ColumnInfo(name = "forked_from")
+    val forkedFrom: String? = null,
 )

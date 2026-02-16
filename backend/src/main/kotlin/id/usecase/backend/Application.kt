@@ -4,6 +4,7 @@ import id.usecase.backend.auth.domain.AuthRepository
 import id.usecase.backend.auth.security.JwtService
 import id.usecase.backend.auth.service.AuthService
 import id.usecase.backend.di.configureDependencyInjection
+import id.usecase.backend.note.service.NoteHistoryService
 import id.usecase.backend.note.service.NoteSharingService
 import id.usecase.backend.plugins.configureRouting
 import id.usecase.backend.plugins.configureSecurity
@@ -23,6 +24,7 @@ fun Application.module(
 
     val jwtService by inject<JwtService>()
     val noteSharingService by inject<NoteSharingService>()
+    val noteHistoryService by inject<NoteHistoryService>()
     val noteSyncService by inject<NoteSyncService>()
     val authService by inject<AuthService>()
     val authRepository by inject<AuthRepository>()
@@ -31,6 +33,7 @@ fun Application.module(
     configureSecurity(jwtService = jwtService)
     configureRouting(
         noteSharingService = noteSharingService,
+        noteHistoryService = noteHistoryService,
         noteSyncService = noteSyncService,
         authService = authService,
         authRepository = authRepository,

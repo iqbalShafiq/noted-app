@@ -2,6 +2,7 @@ package id.usecase.backend.note.service
 
 import id.usecase.backend.note.domain.NoteRepository
 import id.usecase.backend.note.domain.NoteShareRepository
+import id.usecase.backend.note.domain.NoteVisibility
 import id.usecase.backend.note.domain.StoredNote
 import id.usecase.backend.note.domain.StoredNoteShare
 import id.usecase.noted.shared.note.CreateNoteRequest
@@ -32,6 +33,7 @@ class NoteSharingService(
                 updatedAtEpochMillis = now,
                 deletedAtEpochMillis = null,
                 version = 1,
+                visibility = NoteVisibility.PRIVATE,
             ),
         )
 
@@ -49,6 +51,28 @@ class NoteSharingService(
         val note = getNoteById(noteId) ?: return null
         val canAccess = note.ownerUserId == userId || note.sharedWithUserIds.contains(userId)
         return if (canAccess) note else null
+    }
+
+    suspend fun getNoteByLink(noteId: String, requestingUserId: String?): NoteDto? {
+        val stored = noteRepository.findById(noteId)
+            ?.takeIf { it.deletedAtEpochMillis == null }
+            ?: return null
+
+        return when (stored.visibility) {
+            NoteVisibility.PUBLIC -> {
+                stored.toNoteDto(sharedWithUserIds = sharedWithUserIds(noteId))
+            }
+            NoteVisibility.LINK_SHARED -> {
+                stored.toNoteDto(sharedWithUserIds = sharedWithUserIds(noteId))
+            }
+            NoteVisibility.PRIVATE -> {
+                if (requestingUserId != null && stored.ownerUserId == requestingUserId) {
+                    stored.toNoteDto(sharedWithUserIds = sharedWithUserIds(noteId))
+                } else {
+                    null
+                }
+            }
+        }
     }
 
     suspend fun getOwnedNotes(ownerUserId: String): List<NoteDto> {
@@ -124,10 +148,12 @@ class NoteSharingService(
         val normalizedUserId = excludeUserId.trim()
         require(normalizedUserId.isNotBlank()) { "excludeUserId must not be blank" }
 
-        val notes = noteRepository.findAllExcludingOwner(normalizedUserId, limit)
-        return notes.map { note ->
-            note.toNoteDto(sharedWithUserIds = sharedWithUserIds(note.id))
-        }
+        val notes = noteRepository.findPublicNotes(limit)
+        return notes
+            .filter { it.ownerUserId != normalizedUserId }
+            .map { note ->
+                note.toNoteDto(sharedWithUserIds = sharedWithUserIds(note.id))
+            }
     }
 
     private suspend fun sharedWithUserIds(noteId: String): List<String> {

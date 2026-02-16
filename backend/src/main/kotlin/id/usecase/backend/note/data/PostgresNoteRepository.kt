@@ -2,6 +2,7 @@ package id.usecase.backend.note.data
 
 import id.usecase.backend.note.domain.NoteRepository
 import id.usecase.backend.note.domain.NoteSyncRepository
+import id.usecase.backend.note.domain.NoteVisibility
 import id.usecase.backend.note.domain.StoredNote
 import id.usecase.backend.note.domain.SyncApplyResult
 import id.usecase.backend.note.domain.SyncApplyStatus
@@ -25,6 +26,7 @@ class PostgresNoteRepository(
                     statement.setLong(5, note.updatedAtEpochMillis)
                     statement.setObject(6, note.deletedAtEpochMillis)
                     statement.setLong(7, note.version)
+                    statement.setString(8, note.visibility.name)
                     statement.executeUpdate()
                 }
 
@@ -84,7 +86,7 @@ class PostgresNoteRepository(
 
         val placeholders = List(noteIds.size) { "?" }.joinToString(",")
         val sql = """
-            SELECT id, owner_user_id, content, created_at_epoch_millis, updated_at_epoch_millis, deleted_at_epoch_millis, version
+            SELECT id, owner_user_id, content, created_at_epoch_millis, updated_at_epoch_millis, deleted_at_epoch_millis, version, visibility
             FROM notes
             WHERE id IN ($placeholders) AND deleted_at_epoch_millis IS NULL
             ORDER BY created_at_epoch_millis DESC
@@ -111,6 +113,22 @@ class PostgresNoteRepository(
         dataSource.connection.use { connection ->
             connection.prepareStatement(SELECT_ALL_EXCLUDING_OWNER_SQL).use { statement ->
                 statement.setString(1, excludeOwnerUserId)
+                statement.setInt(2, limit)
+                statement.executeQuery().use { resultSet ->
+                    val notes = mutableListOf<StoredNote>()
+                    while (resultSet.next()) {
+                        notes += resultSet.toStoredNote()
+                    }
+                    return notes
+                }
+            }
+        }
+    }
+
+    override suspend fun findPublicNotes(limit: Int): List<StoredNote> {
+        dataSource.connection.use { connection ->
+            connection.prepareStatement(SELECT_PUBLIC_NOTES_SQL).use { statement ->
+                statement.setString(1, NoteVisibility.PUBLIC.name)
                 statement.setInt(2, limit)
                 statement.executeQuery().use { resultSet ->
                     val notes = mutableListOf<StoredNote>()
@@ -202,6 +220,7 @@ class PostgresNoteRepository(
                                 updatedAtEpochMillis = effectiveUpdatedAt,
                                 deletedAtEpochMillis = null,
                                 version = 1,
+                                visibility = NoteVisibility.PRIVATE,
                             )
                             connection.prepareStatement(INSERT_SQL).use { statement ->
                                 statement.setString(1, created.id)
@@ -211,6 +230,7 @@ class PostgresNoteRepository(
                                 statement.setLong(5, created.updatedAtEpochMillis)
                                 statement.setObject(6, created.deletedAtEpochMillis)
                                 statement.setLong(7, created.version)
+                                statement.setString(8, created.visibility.name)
                                 statement.executeUpdate()
                             }
                             created
@@ -243,6 +263,7 @@ class PostgresNoteRepository(
                                 updatedAtEpochMillis = effectiveUpdatedAt,
                                 deletedAtEpochMillis = effectiveUpdatedAt,
                                 version = 1,
+                                visibility = NoteVisibility.PRIVATE,
                             )
                             connection.prepareStatement(INSERT_SQL).use { statement ->
                                 statement.setString(1, deleted.id)
@@ -252,6 +273,7 @@ class PostgresNoteRepository(
                                 statement.setLong(5, deleted.updatedAtEpochMillis)
                                 statement.setObject(6, deleted.deletedAtEpochMillis)
                                 statement.setLong(7, deleted.version)
+                                statement.setString(8, deleted.visibility.name)
                                 statement.executeUpdate()
                             }
                             deleted
@@ -330,6 +352,10 @@ class PostgresNoteRepository(
 
 private fun java.sql.ResultSet.toStoredNote(): StoredNote {
     val deletedAt = getObject("deleted_at_epoch_millis") as? Number
+    val visibilityStr = getString("visibility")
+    val visibility = visibilityStr?.let {
+        runCatching { NoteVisibility.valueOf(it) }.getOrDefault(NoteVisibility.PRIVATE)
+    } ?: NoteVisibility.PRIVATE
     return StoredNote(
         id = getString("id"),
         ownerUserId = getString("owner_user_id"),
@@ -338,6 +364,7 @@ private fun java.sql.ResultSet.toStoredNote(): StoredNote {
         updatedAtEpochMillis = getLong("updated_at_epoch_millis"),
         deletedAtEpochMillis = deletedAt?.toLong(),
         version = getLong("version"),
+        visibility = visibility,
     )
 }
 
@@ -349,8 +376,9 @@ private const val INSERT_SQL = """
         created_at_epoch_millis,
         updated_at_epoch_millis,
         deleted_at_epoch_millis,
-        version
-    ) VALUES (?, ?, ?, ?, ?, ?, ?)
+        version,
+        visibility
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
 """
 
 private const val UPDATE_SQL = """
@@ -360,30 +388,38 @@ private const val UPDATE_SQL = """
 """
 
 private const val SELECT_BY_ID_SQL = """
-    SELECT id, owner_user_id, content, created_at_epoch_millis, updated_at_epoch_millis, deleted_at_epoch_millis, version
+    SELECT id, owner_user_id, content, created_at_epoch_millis, updated_at_epoch_millis, deleted_at_epoch_millis, version, visibility
     FROM notes
     WHERE id = ?
     LIMIT 1
 """
 
 private const val SELECT_BY_ID_FOR_UPDATE_SQL = """
-    SELECT id, owner_user_id, content, created_at_epoch_millis, updated_at_epoch_millis, deleted_at_epoch_millis, version
+    SELECT id, owner_user_id, content, created_at_epoch_millis, updated_at_epoch_millis, deleted_at_epoch_millis, version, visibility
     FROM notes
     WHERE id = ?
     FOR UPDATE
 """
 
 private const val SELECT_BY_OWNER_SQL = """
-    SELECT id, owner_user_id, content, created_at_epoch_millis, updated_at_epoch_millis, deleted_at_epoch_millis, version
+    SELECT id, owner_user_id, content, created_at_epoch_millis, updated_at_epoch_millis, deleted_at_epoch_millis, version, visibility
     FROM notes
     WHERE owner_user_id = ? AND deleted_at_epoch_millis IS NULL
     ORDER BY created_at_epoch_millis DESC
 """
 
 private const val SELECT_ALL_EXCLUDING_OWNER_SQL = """
-    SELECT id, owner_user_id, content, created_at_epoch_millis, updated_at_epoch_millis, deleted_at_epoch_millis, version
+    SELECT id, owner_user_id, content, created_at_epoch_millis, updated_at_epoch_millis, deleted_at_epoch_millis, version, visibility
     FROM notes
     WHERE owner_user_id != ? AND deleted_at_epoch_millis IS NULL
+    ORDER BY created_at_epoch_millis DESC
+    LIMIT ?
+"""
+
+private const val SELECT_PUBLIC_NOTES_SQL = """
+    SELECT id, owner_user_id, content, created_at_epoch_millis, updated_at_epoch_millis, deleted_at_epoch_millis, version, visibility
+    FROM notes
+    WHERE visibility = ? AND deleted_at_epoch_millis IS NULL
     ORDER BY created_at_epoch_millis DESC
     LIMIT ?
 """
@@ -407,7 +443,7 @@ private const val SELECT_PULL_CHANGES_SQL = """
         WHERE owner_user_id = ? AND cursor > ?
         GROUP BY note_id
     )
-    SELECT n.id, n.owner_user_id, n.content, n.created_at_epoch_millis, n.updated_at_epoch_millis, n.deleted_at_epoch_millis, n.version
+    SELECT n.id, n.owner_user_id, n.content, n.created_at_epoch_millis, n.updated_at_epoch_millis, n.deleted_at_epoch_millis, n.version, n.visibility
     FROM changed c
     JOIN notes n ON n.id = c.note_id
     ORDER BY c.latest_cursor ASC

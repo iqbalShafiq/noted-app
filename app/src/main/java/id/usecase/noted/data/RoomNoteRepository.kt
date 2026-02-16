@@ -14,6 +14,7 @@ import id.usecase.noted.data.sync.NoteSyncStatus
 import id.usecase.noted.data.sync.SessionStore
 import id.usecase.noted.data.sync.UserSession
 import id.usecase.noted.domain.Note
+import id.usecase.noted.domain.NoteVisibility
 import id.usecase.noted.shared.note.SyncMutationDto
 import id.usecase.noted.shared.note.SyncMutationType
 import id.usecase.noted.shared.note.SyncPushRequest
@@ -124,6 +125,7 @@ class RoomNoteRepository(
                 updatedAt = now,
                 ownerUserId = currentSession.userId,
                 syncStatus = syncState.name,
+                visibility = id.usecase.noted.domain.NoteVisibility.PRIVATE.name,
             ),
         )
 
@@ -522,18 +524,7 @@ class RoomNoteRepository(
             }
 
             if (local == null) {
-                noteDao.insert(
-                    NoteEntity(
-                        noteId = remote.noteId,
-                        content = remote.content,
-                        createdAt = remote.createdAtEpochMillis,
-                        updatedAt = remote.updatedAtEpochMillis,
-                        ownerUserId = userId,
-                        syncStatus = LocalSyncStatus.SYNCED.name,
-                        serverVersion = remote.version,
-                        deletedAt = remote.deletedAtEpochMillis,
-                    ),
-                )
+                noteDao.insert(remote.toEntity(userId = userId))
                 return@forEach
             }
 
@@ -629,9 +620,26 @@ private fun NoteEntity.toDomain(): Note {
         updatedAt = updatedAt,
         ownerUserId = ownerUserId,
         syncStatus = syncStatus.toLocalSyncStatus(),
+        visibility = NoteVisibility.fromString(visibility),
+        forkedFrom = forkedFrom,
     )
 }
 
 private fun String.toLocalSyncStatus(): LocalSyncStatus {
     return LocalSyncStatus.entries.firstOrNull { it.name == this } ?: LocalSyncStatus.SYNC_ERROR
+}
+
+private fun id.usecase.noted.shared.note.SyncedNoteDto.toEntity(userId: String): NoteEntity {
+    return NoteEntity(
+        noteId = noteId,
+        content = content,
+        createdAt = createdAtEpochMillis,
+        updatedAt = updatedAtEpochMillis,
+        ownerUserId = userId,
+        syncStatus = LocalSyncStatus.SYNCED.name,
+        serverVersion = version,
+        deletedAt = deletedAtEpochMillis,
+        visibility = "PRIVATE",
+        forkedFrom = null,
+    )
 }

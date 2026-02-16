@@ -9,13 +9,17 @@ import id.usecase.backend.auth.security.JwtConfig
 import id.usecase.backend.auth.security.JwtService
 import id.usecase.backend.auth.security.toJwtConfig
 import id.usecase.backend.auth.service.AuthService
+import id.usecase.backend.note.data.InMemoryNoteHistoryRepository
 import id.usecase.backend.note.data.InMemoryNoteRepository
 import id.usecase.backend.note.data.InMemoryNoteShareRepository
+import id.usecase.backend.note.data.PostgresNoteHistoryRepository
 import id.usecase.backend.note.data.PostgresNoteRepository
 import id.usecase.backend.note.data.PostgresNoteShareRepository
+import id.usecase.backend.note.domain.NoteHistoryRepository
 import id.usecase.backend.note.domain.NoteRepository
 import id.usecase.backend.note.domain.NoteShareRepository
 import id.usecase.backend.note.domain.NoteSyncRepository
+import id.usecase.backend.note.service.NoteHistoryService
 import id.usecase.backend.note.service.NoteSharingService
 import id.usecase.backend.sync.service.NoteSyncService
 import io.ktor.server.application.Application
@@ -70,6 +74,12 @@ private fun commonModule(config: ApplicationConfig) = module {
     }
     single { NoteSyncService(noteSyncRepository = get()) }
     single {
+        NoteHistoryService(
+            noteHistoryRepository = get(),
+            noteRepository = get(),
+        )
+    }
+    single {
         AuthService(
             authRepository = get(),
             jwtService = get(),
@@ -82,6 +92,7 @@ private fun inMemoryStorageModule() = module {
     single<NoteRepository> { get<InMemoryNoteRepository>() }
     single<NoteSyncRepository> { get<InMemoryNoteRepository>() }
     single<NoteShareRepository> { InMemoryNoteShareRepository() }
+    single<NoteHistoryRepository> { InMemoryNoteHistoryRepository() }
     single<AuthRepository> { InMemoryAuthRepository() }
 }
 
@@ -97,6 +108,7 @@ private fun postgresStorageModule() = module {
     single<NoteRepository> { get<PostgresNoteRepository>() }
     single<NoteSyncRepository> { get<PostgresNoteRepository>() }
     single<NoteShareRepository> { PostgresNoteShareRepository(get()) }
+    single<NoteHistoryRepository> { PostgresNoteHistoryRepository(get()) }
     single<AuthRepository> { PostgresAuthRepository(get()) }
 }
 
@@ -221,6 +233,11 @@ private fun initializeSchema(dataSource: DataSource) {
             runCatching { statement.executeUpdate(ALTER_USERS_ADD_EMAIL_SQL) }
             runCatching { statement.executeUpdate(ALTER_USERS_ADD_LAST_LOGIN_SQL) }
             runCatching { statement.executeUpdate(ALTER_USERS_ADD_UPDATED_AT_SQL) }
+            runCatching { statement.executeUpdate(ALTER_NOTES_ADD_VISIBILITY_SQL) }
+            runCatching { statement.executeUpdate(BACKFILL_NOTES_VISIBILITY_SQL) }
+            runCatching { statement.executeUpdate(CREATE_NOTES_VISIBILITY_INDEX_SQL) }
+            runCatching { statement.executeUpdate(CREATE_NOTE_HISTORY_TABLE_SQL) }
+            runCatching { statement.executeUpdate(CREATE_NOTE_HISTORY_USER_INDEX_SQL) }
         }
     }
 }
@@ -344,4 +361,38 @@ private const val DROP_SYNC_EVENTS_FK_SQL = """
 private const val CREATE_SYNC_EVENTS_OWNER_CURSOR_INDEX_SQL = """
     CREATE INDEX IF NOT EXISTS idx_note_sync_events_owner_cursor
     ON note_sync_events(owner_user_id, cursor)
+"""
+
+private const val ALTER_NOTES_ADD_VISIBILITY_SQL = """
+    ALTER TABLE notes
+    ADD COLUMN IF NOT EXISTS visibility TEXT NOT NULL DEFAULT 'PRIVATE'
+"""
+
+private const val BACKFILL_NOTES_VISIBILITY_SQL = """
+    UPDATE notes
+    SET visibility = 'PRIVATE'
+    WHERE visibility IS NULL
+"""
+
+private const val CREATE_NOTES_VISIBILITY_INDEX_SQL = """
+    CREATE INDEX IF NOT EXISTS idx_notes_visibility
+    ON notes(visibility, created_at_epoch_millis DESC)
+    WHERE deleted_at_epoch_millis IS NULL
+"""
+
+private const val CREATE_NOTE_HISTORY_TABLE_SQL = """
+    CREATE TABLE IF NOT EXISTS note_history (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL,
+        note_id TEXT NOT NULL,
+        note_owner_id TEXT NOT NULL,
+        content TEXT NOT NULL,
+        viewed_at_epoch_millis BIGINT NOT NULL,
+        UNIQUE (user_id, note_id)
+    )
+"""
+
+private const val CREATE_NOTE_HISTORY_USER_INDEX_SQL = """
+    CREATE INDEX IF NOT EXISTS idx_note_history_user_viewed
+    ON note_history(user_id, viewed_at_epoch_millis DESC)
 """

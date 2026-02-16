@@ -2,10 +2,12 @@ package id.usecase.noted.presentation.note.list
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import id.usecase.noted.data.NoteHistoryRepository
 import id.usecase.noted.data.NoteRepository
 import id.usecase.noted.data.sync.NoteSyncCoordinator
 import id.usecase.noted.domain.Note
 import id.usecase.noted.domain.NoteContentCodec
+import id.usecase.noted.domain.NoteHistory
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
@@ -14,6 +16,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
@@ -21,6 +24,7 @@ import kotlinx.coroutines.launch
 
 class NoteListViewModel(
     private val noteRepository: NoteRepository,
+    private val noteHistoryRepository: NoteHistoryRepository,
     private val noteSyncCoordinator: NoteSyncCoordinator,
 ) : ViewModel() {
     private val _state = MutableStateFlow(NoteListState())
@@ -29,11 +33,15 @@ class NoteListViewModel(
     private val _effect = Channel<NoteListEffect>(Channel.BUFFERED)
     val effect: Flow<NoteListEffect> = _effect.receiveAsFlow()
 
-    private var observeJob: Job? = null
+    private var myNotesJob: Job? = null
+    private var savedNotesJob: Job? = null
+    private var historyJob: Job? = null
     private var syncObserveJob: Job? = null
 
     init {
-        startObserveNotes()
+        startObserveMyNotes()
+        startObserveSavedNotes()
+        startObserveHistory()
         startObserveSyncStatus()
     }
 
@@ -49,7 +57,11 @@ class NoteListViewModel(
 
             is NoteListIntent.NoteDeleteClicked -> deleteNote(intent.noteId)
 
-            NoteListIntent.RetryObserve -> startObserveNotes()
+            NoteListIntent.RetryObserve -> {
+                startObserveMyNotes()
+                startObserveSavedNotes()
+                startObserveHistory()
+            }
 
             is NoteListIntent.SearchQueryChanged -> {
                 _state.update { currentState ->
@@ -58,8 +70,6 @@ class NoteListViewModel(
             }
 
             NoteListIntent.SearchClicked -> {
-                // Search is handled reactively via state update
-                // UI can use filteredNotes from state
             }
 
             NoteListIntent.SyncClicked -> {
@@ -73,12 +83,22 @@ class NoteListViewModel(
             NoteListIntent.ExploreClicked -> {
                 _effect.trySend(NoteListEffect.NavigateToExplore)
             }
+
+            is NoteListIntent.TabSelected -> {
+                _state.update { currentState ->
+                    currentState.copy(selectedTab = intent.tabIndex)
+                }
+            }
+
+            is NoteListIntent.HistoryNoteClicked -> {
+                _effect.trySend(NoteListEffect.NavigateToHistoryNote(noteId = intent.noteId))
+            }
         }
     }
 
-    private fun startObserveNotes() {
-        observeJob?.cancel()
-        observeJob = viewModelScope.launch {
+    private fun startObserveMyNotes() {
+        myNotesJob?.cancel()
+        myNotesJob = viewModelScope.launch {
             _state.update { currentState ->
                 currentState.copy(
                     isLoading = true,
@@ -87,7 +107,7 @@ class NoteListViewModel(
             }
 
             noteRepository.observeNotes()
-                .map { notes -> notes.map(Note::toListItemUi) }
+                .map { notes -> notes.filter { it.forkedFrom == null }.map(Note::toListItemUi) }
                 .catch { error ->
                     _state.update { currentState ->
                         currentState.copy(
@@ -106,7 +126,51 @@ class NoteListViewModel(
                         currentState.copy(
                             isLoading = false,
                             errorMessage = null,
-                            notes = notes,
+                            myNotes = notes,
+                        )
+                    }
+                }
+        }
+    }
+
+    private fun startObserveSavedNotes() {
+        savedNotesJob?.cancel()
+        savedNotesJob = viewModelScope.launch {
+            noteRepository.observeNotes()
+                .map { notes -> notes.filter { it.forkedFrom != null }.map(Note::toListItemUi) }
+                .catch { error ->
+                    _effect.trySend(
+                        NoteListEffect.ShowMessage(
+                            error.message ?: "Gagal memuat note tersimpan",
+                        ),
+                    )
+                }
+                .collect { notes ->
+                    _state.update { currentState ->
+                        currentState.copy(
+                            savedNotes = notes,
+                        )
+                    }
+                }
+        }
+    }
+
+    private fun startObserveHistory() {
+        historyJob?.cancel()
+        historyJob = viewModelScope.launch {
+            noteHistoryRepository.getHistory(limit = 50)
+                .map { historyList -> historyList.map(NoteHistory::toHistoryItemUi) }
+                .catch { error ->
+                    _effect.trySend(
+                        NoteListEffect.ShowMessage(
+                            error.message ?: "Gagal memuat riwayat",
+                        ),
+                    )
+                }
+                .collect { history ->
+                    _state.update { currentState ->
+                        currentState.copy(
+                            historyNotes = history,
                         )
                     }
                 }
@@ -145,7 +209,6 @@ class NoteListViewModel(
             }
         }
     }
-
 }
 
 private fun Note.toListItemUi(): NoteListItemUi {
@@ -153,5 +216,16 @@ private fun Note.toListItemUi(): NoteListItemUi {
         id = id,
         content = NoteContentCodec.toListPreview(content),
         createdAt = createdAt,
+        visibility = visibility,
+    )
+}
+
+private fun NoteHistory.toHistoryItemUi(): NoteHistoryItemUi {
+    return NoteHistoryItemUi(
+        id = noteId,
+        ownerUserId = ownerUserId,
+        title = NoteContentCodec.toTitlePreview(content),
+        preview = NoteContentCodec.toListPreview(content),
+        viewedAt = viewedAt,
     )
 }

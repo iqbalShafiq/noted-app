@@ -20,6 +20,7 @@ data class NoteDto(
     val content: String,
     val createdAtEpochMillis: Long,
     val sharedWithUserIds: List<String> = emptyList(),
+    val visibility: String = "PRIVATE",
 )
 
 @Serializable

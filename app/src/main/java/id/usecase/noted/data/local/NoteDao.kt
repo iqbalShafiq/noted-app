@@ -169,4 +169,25 @@ interface NoteDao {
 
     @Query("DELETE FROM notes WHERE note_id = :remoteNoteId")
     suspend fun deleteByRemoteId(remoteNoteId: String)
+
+    @Query(
+        """
+        SELECT * FROM notes 
+        WHERE visibility = :visibility 
+          AND deleted_at IS NULL 
+        ORDER BY updated_at DESC
+        """,
+    )
+    fun getNotesByVisibility(visibility: String): Flow<List<NoteEntity>>
+
+    @Query(
+        """
+        SELECT * FROM notes 
+        WHERE visibility != 'PRIVATE' 
+          AND owner_user_id != :ownerId 
+          AND deleted_at IS NULL 
+        ORDER BY updated_at DESC
+        """,
+    )
+    fun getSharedNotesExcludingOwner(ownerId: String): Flow<List<NoteEntity>>
 }
