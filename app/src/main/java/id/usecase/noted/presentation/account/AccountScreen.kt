@@ -3,15 +3,28 @@ package id.usecase.noted.presentation.account
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -22,20 +35,30 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import id.usecase.noted.ui.theme.NotedTheme
 import java.text.DateFormat
+import java.text.SimpleDateFormat
 import java.util.Date
+import java.util.Locale
 
 @Composable
 fun AccountScreenRoot(
@@ -43,16 +66,21 @@ fun AccountScreenRoot(
     onShowMessage: (String) -> Unit,
     onNavigateBack: () -> Unit,
     onNavigateToLogin: () -> Unit,
+    onNavigateToEditProfile: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(viewModel) {
         viewModel.effect.collect { effect ->
             when (effect) {
                 AccountEffect.NavigateBack -> onNavigateBack()
                 AccountEffect.NavigateToLogin -> onNavigateToLogin()
-                is AccountEffect.ShowMessage -> onShowMessage(effect.message)
+                is AccountEffect.ShowMessage -> {
+                    snackbarHostState.showSnackbar(effect.message)
+                    onShowMessage(effect.message)
+                }
             }
         }
     }
@@ -60,6 +88,8 @@ fun AccountScreenRoot(
     AccountScreen(
         state = state,
         onIntent = viewModel::onIntent,
+        snackbarHostState = snackbarHostState,
+        onNavigateToEditProfile = onNavigateToEditProfile,
         modifier = modifier,
     )
 }
@@ -69,6 +99,8 @@ fun AccountScreenRoot(
 fun AccountScreen(
     state: AccountState,
     onIntent: (AccountIntent) -> Unit,
+    snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
+    onNavigateToEditProfile: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     Scaffold(
@@ -83,8 +115,22 @@ fun AccountScreen(
                         )
                     }
                 },
+                actions = {
+                    if (state.isLoggedIn && !state.isLoading) {
+                        IconButton(
+                            onClick = { onIntent(AccountIntent.RefreshProfile) },
+                            enabled = !state.isLoading,
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Refresh,
+                                contentDescription = "Refresh Profil",
+                            )
+                        }
+                    }
+                },
             )
         },
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         modifier = modifier,
     ) { paddingValues ->
         Box(
@@ -92,8 +138,7 @@ fun AccountScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
                 .statusBarsPadding()
-                .navigationBarsPadding()
-                .padding(horizontal = 16.dp, vertical = 12.dp),
+                .navigationBarsPadding(),
         ) {
             when {
                 state.isLoading -> {
@@ -101,31 +146,17 @@ fun AccountScreen(
                 }
 
                 state.errorMessage != null -> {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .align(Alignment.Center),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(12.dp),
-                    ) {
-                        Text(
-                            text = state.errorMessage,
-                            textAlign = TextAlign.Center,
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.error,
-                        )
-                        Button(
-                            onClick = { onIntent(AccountIntent.LoadAccountInfo) },
-                        ) {
-                            Text("Coba Lagi")
-                        }
-                    }
+                    ErrorContent(
+                        errorMessage = state.errorMessage,
+                        onRetry = { onIntent(AccountIntent.RefreshProfile) },
+                    )
                 }
 
                 state.isLoggedIn -> {
                     LoggedInContent(
                         state = state,
                         onIntent = onIntent,
+                        onNavigateToEditProfile = onNavigateToEditProfile,
                     )
                 }
 
@@ -138,88 +169,379 @@ fun AccountScreen(
 }
 
 @Composable
-private fun LoggedInContent(
-    state: AccountState,
-    onIntent: (AccountIntent) -> Unit,
+private fun ErrorContent(
+    errorMessage: String,
+    onRetry: () -> Unit,
 ) {
     Column(
-        modifier = Modifier.fillMaxSize(),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
     ) {
         Card(
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                containerColor = MaterialTheme.colorScheme.errorContainer,
             ),
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
+                    .padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
                 Text(
-                    text = "Informasi Akun",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onSurface,
+                    text = errorMessage,
+                    textAlign = TextAlign.Center,
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onErrorContainer,
                 )
-
-                state.username?.let { username ->
-                    Column {
-                        Text(
-                            text = "Username",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                        Text(
-                            text = username,
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurface,
-                        )
-                    }
-                }
-
-                state.userId?.let { userId ->
-                    Column {
-                        Text(
-                            text = "User ID",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                        Text(
-                            text = userId,
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurface,
-                        )
-                    }
-                }
-
-                state.lastSyncAt?.let { timestamp ->
-                    Column {
-                        Text(
-                            text = "Sinkron Terakhir",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                        Text(
-                            text = DateFormat.getDateTimeInstance().format(Date(timestamp)),
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurface,
-                        )
-                    }
+                Button(
+                    onClick = onRetry,
+                ) {
+                    Text("Coba Lagi")
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun LoggedInContent(
+    state: AccountState,
+    onIntent: (AccountIntent) -> Unit,
+    onNavigateToEditProfile: () -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        ProfileHeaderSection(
+            displayName = state.displayName,
+            username = state.username,
+            bio = state.bio,
+            email = state.email,
+            profilePictureUrl = state.profilePictureUrl,
+        )
+
+        AccountInfoSection(
+            userId = state.userId,
+            createdAtEpochMillis = state.createdAtEpochMillis,
+            lastLoginAtEpochMillis = state.lastLoginAtEpochMillis,
+            updatedAtEpochMillis = state.updatedAtEpochMillis,
+        )
+
+        StatisticsSection(
+            totalNotes = state.totalNotes,
+            notesShared = state.notesShared,
+            notesReceived = state.notesReceived,
+            lastSyncAtEpochMillis = state.lastSyncAtEpochMillis,
+        )
 
         Spacer(modifier = Modifier.weight(1f))
 
+        ActionsSection(
+            onEditProfile = onNavigateToEditProfile,
+            onLogout = { onIntent(AccountIntent.LogoutClicked) },
+        )
+    }
+}
+
+@Composable
+private fun ProfileHeaderSection(
+    displayName: String?,
+    username: String?,
+    bio: String?,
+    email: String?,
+    profilePictureUrl: String?,
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainer,
+        ),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            // Profile Picture
+            if (!profilePictureUrl.isNullOrBlank()) {
+                AsyncImage(
+                    model = ImageRequest.Builder(LocalContext.current)
+                        .data(profilePictureUrl)
+                        .crossfade(true)
+                        .build(),
+                    contentDescription = "Foto Profil",
+                    modifier = Modifier
+                        .size(100.dp)
+                        .clip(CircleShape),
+                    contentScale = ContentScale.Crop,
+                )
+            } else {
+                Box(
+                    modifier = Modifier
+                        .size(100.dp)
+                        .clip(CircleShape)
+                        .padding(4.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Person,
+                        contentDescription = "Foto Profil Default",
+                        modifier = Modifier.size(80.dp),
+                        tint = MaterialTheme.colorScheme.primary,
+                    )
+                }
+            }
+
+            // Display Name
+            Text(
+                text = displayName ?: username ?: "Pengguna",
+                style = MaterialTheme.typography.headlineSmall,
+                color = MaterialTheme.colorScheme.onSurface,
+                textAlign = TextAlign.Center,
+            )
+
+            // Username
+            if (!username.isNullOrBlank()) {
+                Text(
+                    text = "@$username",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+
+            // Bio
+            if (!bio.isNullOrBlank()) {
+                Text(
+                    text = bio,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                )
+            }
+
+            // Email
+            if (!email.isNullOrBlank()) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center,
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Email,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = email,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun AccountInfoSection(
+    userId: String?,
+    createdAtEpochMillis: Long?,
+    lastLoginAtEpochMillis: Long?,
+    updatedAtEpochMillis: Long?,
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainer,
+        ),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Text(
+                text = "Informasi Akun",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+
+            userId?.let {
+                InfoItem(label = "User ID", value = it)
+            }
+
+            createdAtEpochMillis?.let {
+                InfoItem(
+                    label = "Bergabung Sejak",
+                    value = formatDate(it),
+                )
+            }
+
+            lastLoginAtEpochMillis?.let {
+                InfoItem(
+                    label = "Login Terakhir",
+                    value = formatDateTime(it),
+                )
+            }
+
+            updatedAtEpochMillis?.let {
+                InfoItem(
+                    label = "Profil Diperbarui",
+                    value = formatDateTime(it),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun InfoItem(label: String, value: String) {
+    Column {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Text(
+            text = value,
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun StatisticsSection(
+    totalNotes: Int,
+    notesShared: Int,
+    notesReceived: Int,
+    lastSyncAtEpochMillis: Long?,
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainer,
+        ),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Text(
+                text = "Statistik",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+
+            FlowRow(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly,
+                maxItemsInEachRow = 2,
+            ) {
+                StatItem(
+                    value = totalNotes.toString(),
+                    label = "Total Catatan",
+                    icon = Icons.Default.Edit,
+                )
+                StatItem(
+                    value = notesShared.toString(),
+                    label = "Dibagikan",
+                    icon = Icons.Default.Share,
+                )
+                StatItem(
+                    value = notesReceived.toString(),
+                    label = "Diterima",
+                    icon = Icons.Default.Person,
+                )
+                lastSyncAtEpochMillis?.let {
+                    StatItem(
+                        value = formatTime(it),
+                        label = "Sinkron Terakhir",
+                        icon = Icons.Default.Refresh,
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun StatItem(
+    value: String,
+    label: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier.padding(vertical = 8.dp, horizontal = 16.dp),
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            modifier = Modifier.size(24.dp),
+            tint = MaterialTheme.colorScheme.primary,
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = value,
+            style = MaterialTheme.typography.headlineSmall,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+@Composable
+private fun ActionsSection(
+    onEditProfile: () -> Unit,
+    onLogout: () -> Unit,
+) {
+    Column(
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
         Button(
-            onClick = { onIntent(AccountIntent.LogoutClicked) },
+            onClick = onEditProfile,
             modifier = Modifier
                 .fillMaxWidth()
                 .height(48.dp),
-            colors = androidx.compose.material3.ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.error,
+        ) {
+            Icon(
+                imageVector = Icons.Default.Edit,
+                contentDescription = null,
+                modifier = Modifier.size(20.dp),
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text("Edit Profil")
+        }
+
+        OutlinedButton(
+            onClick = onLogout,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(48.dp),
+            colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(
+                contentColor = MaterialTheme.colorScheme.error,
             ),
         ) {
             Text("Logout")
@@ -230,7 +552,9 @@ private fun LoggedInContent(
 @Composable
 private fun NotLoggedInContent(onIntent: (AccountIntent) -> Unit) {
     Column(
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
@@ -273,6 +597,27 @@ private fun NotLoggedInContent(onIntent: (AccountIntent) -> Unit) {
     }
 }
 
+private fun formatDate(epochMillis: Long): String {
+    return SimpleDateFormat("dd MMMM yyyy", Locale("id", "ID"))
+        .format(Date(epochMillis))
+}
+
+private fun formatDateTime(epochMillis: Long): String {
+    return DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT, Locale("id", "ID"))
+        .format(Date(epochMillis))
+}
+
+private fun formatTime(epochMillis: Long): String {
+    val now = System.currentTimeMillis()
+    val diff = now - epochMillis
+    return when {
+        diff < 60_000 -> "Baru saja"
+        diff < 3_600_000 -> "${diff / 60_000}m"
+        diff < 86_400_000 -> "${diff / 3_600_000}j"
+        else -> SimpleDateFormat("dd MMM", Locale("id", "ID")).format(Date(epochMillis))
+    }
+}
+
 @Preview(showBackground = true)
 @Composable
 private fun AccountScreenLoggedInPreview() {
@@ -282,8 +627,18 @@ private fun AccountScreenLoggedInPreview() {
                 isLoading = false,
                 isLoggedIn = true,
                 username = "johndoe",
-                userId = "12345",
-                lastSyncAt = System.currentTimeMillis(),
+                userId = "user-123-456",
+                displayName = "John Doe",
+                bio = "Android developer enthusiast. Love coding and coffee.",
+                profilePictureUrl = null,
+                email = "john@example.com",
+                createdAtEpochMillis = System.currentTimeMillis() - 86400000 * 30,
+                lastLoginAtEpochMillis = System.currentTimeMillis() - 3600000,
+                updatedAtEpochMillis = System.currentTimeMillis() - 86400000,
+                totalNotes = 42,
+                notesShared = 5,
+                notesReceived = 3,
+                lastSyncAtEpochMillis = System.currentTimeMillis() - 1800000,
             ),
             onIntent = {},
         )
@@ -311,6 +666,22 @@ private fun AccountScreenLoadingPreview() {
         AccountScreen(
             state = AccountState(
                 isLoading = true,
+            ),
+            onIntent = {},
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun AccountScreenErrorPreview() {
+    NotedTheme {
+        AccountScreen(
+            state = AccountState(
+                isLoading = false,
+                isLoggedIn = true,
+                errorMessage = "Gagal memuat profil. Periksa koneksi internet Anda.",
+                username = "johndoe",
             ),
             onIntent = {},
         )
