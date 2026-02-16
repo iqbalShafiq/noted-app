@@ -39,7 +39,7 @@ class KtorUserApi(
     }
 }
 
-private inline fun <T> safeApiCall(
+private suspend inline fun <T> safeApiCall(
     crossinline block: suspend () -> T,
 ): Result<T> {
     return try {
