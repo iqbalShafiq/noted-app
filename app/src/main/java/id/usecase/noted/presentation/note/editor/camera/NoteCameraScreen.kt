@@ -17,6 +17,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -242,12 +243,21 @@ private fun CameraContent(
         AndroidView(
             modifier = Modifier
                 .fillMaxSize()
-                .pointerInput(Unit) {
-                    detectTapGestures { offset ->
-                        focusPoint = offset
-                        showFocusIndicator = true
+            .pointerInput(Unit) {
+                detectTapGestures { offset ->
+                    focusPoint = offset
+                    showFocusIndicator = true
+                }
+            }
+            .pointerInput(Unit) {
+                detectTransformGestures { centroid, pan, zoom, rotation ->
+                    if (zoom != 1f) {
+                        val currentZoom = state.zoomRatio
+                        val newZoom = (currentZoom * zoom).coerceIn(1f, state.maxZoom)
+                        onIntent(CameraIntent.SetZoom(newZoom))
                     }
-                },
+                }
+            },
             factory = { previewView },
         )
 
