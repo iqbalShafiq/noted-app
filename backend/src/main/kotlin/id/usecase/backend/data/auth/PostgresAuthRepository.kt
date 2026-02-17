@@ -1,8 +1,8 @@
-package id.usecase.backend.auth.data
+package id.usecase.backend.data.auth
 
-import id.usecase.backend.auth.domain.AuthRepository
-import id.usecase.backend.auth.domain.AuthUser
-import id.usecase.backend.auth.domain.UserStatistics
+import id.usecase.backend.domain.auth.AuthRepository
+import id.usecase.backend.domain.auth.AuthUser
+import id.usecase.backend.domain.auth.UserStatistics
 import java.sql.SQLIntegrityConstraintViolationException
 import java.util.UUID
 import javax.sql.DataSource

@@ -1,12 +1,12 @@
-package id.usecase.backend.note.data
+package id.usecase.backend.data.note
 
-import id.usecase.backend.note.domain.NoteRepository
-import id.usecase.backend.note.domain.NoteSyncRepository
-import id.usecase.backend.note.domain.NoteVisibility
-import id.usecase.backend.note.domain.StoredNote
-import id.usecase.backend.note.domain.SyncApplyResult
-import id.usecase.backend.note.domain.SyncApplyStatus
-import id.usecase.backend.note.domain.SyncPullData
+import id.usecase.backend.domain.note.NoteRepository
+import id.usecase.backend.domain.note.NoteSyncRepository
+import id.usecase.backend.domain.note.NoteVisibility
+import id.usecase.backend.domain.note.StoredNote
+import id.usecase.backend.domain.note.SyncApplyResult
+import id.usecase.backend.domain.note.SyncApplyStatus
+import id.usecase.backend.domain.note.SyncPullData
 import id.usecase.noted.shared.note.SyncMutationDto
 import id.usecase.noted.shared.note.SyncMutationType
 import javax.sql.DataSource

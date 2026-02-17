@@ -1,8 +1,8 @@
-package id.usecase.backend.note.service
+package id.usecase.backend.service.note
 
-import id.usecase.backend.note.domain.NoteHistoryRepository
-import id.usecase.backend.note.domain.NoteRepository
-import id.usecase.backend.note.domain.StoredNoteHistory
+import id.usecase.backend.domain.note.NoteHistoryRepository
+import id.usecase.backend.domain.note.NoteRepository
+import id.usecase.backend.domain.note.StoredNoteHistory
 
 class NoteHistoryService(
     private val noteHistoryRepository: NoteHistoryRepository,

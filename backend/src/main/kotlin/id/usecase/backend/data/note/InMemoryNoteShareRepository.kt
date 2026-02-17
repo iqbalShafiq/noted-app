@@ -1,7 +1,7 @@
-package id.usecase.backend.note.data
+package id.usecase.backend.data.note
 
-import id.usecase.backend.note.domain.NoteShareRepository
-import id.usecase.backend.note.domain.StoredNoteShare
+import id.usecase.backend.domain.note.NoteShareRepository
+import id.usecase.backend.domain.note.StoredNoteShare
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 

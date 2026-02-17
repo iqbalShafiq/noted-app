@@ -1,7 +1,7 @@
-package id.usecase.backend.auth.data
+package id.usecase.backend.data.auth
 
-import id.usecase.backend.auth.domain.AuthRepository
-import id.usecase.backend.auth.domain.AuthUser
+import id.usecase.backend.domain.auth.AuthRepository
+import id.usecase.backend.domain.auth.AuthUser
 import java.util.UUID
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock

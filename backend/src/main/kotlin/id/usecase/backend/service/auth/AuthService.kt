@@ -1,6 +1,6 @@
-package id.usecase.backend.auth.service
+package id.usecase.backend.service.auth
 
-import id.usecase.backend.auth.domain.AuthRepository
+import id.usecase.backend.domain.auth.AuthRepository
 import id.usecase.backend.auth.security.JwtService
 import id.usecase.noted.shared.auth.AuthForgotPasswordRequest
 import id.usecase.noted.shared.auth.AuthForgotPasswordResponse

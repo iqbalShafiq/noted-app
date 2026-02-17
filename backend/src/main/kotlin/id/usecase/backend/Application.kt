@@ -1,15 +1,15 @@
 package id.usecase.backend
 
-import id.usecase.backend.auth.domain.AuthRepository
 import id.usecase.backend.auth.security.JwtService
-import id.usecase.backend.auth.service.AuthService
 import id.usecase.backend.di.configureDependencyInjection
-import id.usecase.backend.note.service.NoteHistoryService
-import id.usecase.backend.note.service.NoteSharingService
+import id.usecase.backend.domain.auth.AuthRepository
 import id.usecase.backend.plugins.configureRouting
 import id.usecase.backend.plugins.configureSecurity
 import id.usecase.backend.plugins.configureSerialization
-import id.usecase.backend.sync.service.NoteSyncService
+import id.usecase.backend.service.auth.AuthService
+import id.usecase.backend.service.note.NoteHistoryService
+import id.usecase.backend.service.note.NoteSharingService
+import id.usecase.backend.service.sync.NoteSyncService
 import io.ktor.server.application.Application
 import org.koin.ktor.ext.inject
 

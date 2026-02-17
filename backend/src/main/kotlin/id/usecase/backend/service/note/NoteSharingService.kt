@@ -1,10 +1,10 @@
-package id.usecase.backend.note.service
+package id.usecase.backend.service.note
 
-import id.usecase.backend.note.domain.NoteRepository
-import id.usecase.backend.note.domain.NoteShareRepository
-import id.usecase.backend.note.domain.NoteVisibility
-import id.usecase.backend.note.domain.StoredNote
-import id.usecase.backend.note.domain.StoredNoteShare
+import id.usecase.backend.domain.note.NoteRepository
+import id.usecase.backend.domain.note.NoteShareRepository
+import id.usecase.backend.domain.note.NoteVisibility
+import id.usecase.backend.domain.note.StoredNote
+import id.usecase.backend.domain.note.StoredNoteShare
 import id.usecase.noted.shared.note.CreateNoteRequest
 import id.usecase.noted.shared.note.NoteDto
 import id.usecase.noted.shared.note.ShareNoteRequest

@@ -1,8 +1,8 @@
-package id.usecase.backend.note.data
+package id.usecase.backend.data.note
 
-import id.usecase.backend.note.domain.NoteHistoryRepository
-import id.usecase.backend.note.domain.StoredNote
-import id.usecase.backend.note.domain.StoredNoteHistory
+import id.usecase.backend.domain.note.NoteHistoryRepository
+import id.usecase.backend.domain.note.StoredNote
+import id.usecase.backend.domain.note.StoredNoteHistory
 import javax.sql.DataSource
 
 class PostgresNoteHistoryRepository(
