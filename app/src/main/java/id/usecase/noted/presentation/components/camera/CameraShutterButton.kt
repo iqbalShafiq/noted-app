@@ -7,7 +7,7 @@ import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Box
@@ -22,10 +22,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -92,8 +90,14 @@ fun CameraShutterButton(
             .scale(scaleAnimatable.value)
             .semantics {
                 this.contentDescription = contentDescription
-                this.role = Role.Button
             }
+            .combinedClickable(
+                interactionSource = interactionSource,
+                indication = null,
+                role = Role.Button,
+                onClick = onClick,
+                onLongClick = onLongPress,
+            )
             .border(
                 width = 4.dp,
                 color = outerRingColor,
@@ -102,13 +106,7 @@ fun CameraShutterButton(
             .background(
                 color = Color.Transparent,
                 shape = CircleShape
-            )
-            .pointerInput(onClick, onLongPress) {
-                detectTapGestures(
-                    onTap = { onClick() },
-                    onLongPress = { onLongPress?.invoke() }
-                )
-            },
+            ),
         contentAlignment = Alignment.Center
     ) {
         Box(

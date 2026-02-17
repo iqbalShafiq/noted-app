@@ -7,8 +7,6 @@ import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.performClick
-import androidx.compose.ui.test.performTouchInput
-import androidx.compose.ui.test.click
 import id.usecase.noted.ui.theme.NotedTheme
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -45,18 +43,20 @@ class CameraComponentsTest {
     @Test
     fun cameraShutterButton_handlesClick() {
         var clicked = false
+        val shutterContentDescription = "Test shutter"
 
         composeRule.setContent {
             NotedTheme {
                 CameraShutterButton(
                     onClick = { clicked = true },
+                    contentDescription = shutterContentDescription,
                 )
             }
         }
 
-        composeRule.onNodeWithContentDescription("Camera shutter")
+        composeRule.onNodeWithContentDescription(shutterContentDescription)
             .assertIsDisplayed()
-            .performTouchInput { click() }
+            .performClick()
 
         composeRule.runOnIdle {
             assertTrue(clicked)
