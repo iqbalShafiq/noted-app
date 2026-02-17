@@ -1,4 +1,4 @@
-package id.usecase.backend.note.domain
+package id.usecase.backend.domain.note
 
 import id.usecase.noted.shared.note.SyncMutationDto
 

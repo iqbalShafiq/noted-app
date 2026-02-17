@@ -1,4 +1,4 @@
-package id.usecase.backend.note.domain
+package id.usecase.backend.domain.note
 
 interface NoteHistoryRepository {
     suspend fun addHistory(userId: String, noteId: String, note: StoredNote)

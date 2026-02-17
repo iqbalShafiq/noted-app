@@ -1,4 +1,4 @@
-package id.usecase.backend.auth.domain
+package id.usecase.backend.domain.auth
 
 data class AuthUser(
     val userId: String,

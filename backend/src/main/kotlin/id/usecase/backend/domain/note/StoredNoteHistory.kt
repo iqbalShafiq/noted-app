@@ -1,4 +1,4 @@
-package id.usecase.backend.note.domain
+package id.usecase.backend.domain.note
 
 data class StoredNoteHistory(
     val id: String,
