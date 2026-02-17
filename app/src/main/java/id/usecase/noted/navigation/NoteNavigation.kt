@@ -21,7 +21,7 @@ import id.usecase.noted.presentation.note.editor.NoteEditorIntent
 import id.usecase.noted.presentation.note.editor.NoteEditorScreenRoot
 import id.usecase.noted.presentation.note.editor.NoteEditorViewModel
 import id.usecase.noted.presentation.note.editor.camera.NoteCameraScreenRoot
-import id.usecase.noted.presentation.note.editor.location.NoteLocationPickerScreen
+import id.usecase.noted.presentation.note.editor.location.NoteLocationPickerScreenRoot
 import id.usecase.noted.presentation.note.list.NoteListScreenRoot
 import id.usecase.noted.presentation.note.list.NoteListViewModel
 import id.usecase.noted.presentation.note.sync.SyncScreenRoot
@@ -259,7 +259,7 @@ fun NoteNavigation(
                     )
                 }
                 entry<NoteLocationPickerNavKey> { key ->
-                    NoteLocationPickerScreen(
+                    NoteLocationPickerScreenRoot(
                         initialLatitude = key.latitude,
                         initialLongitude = key.longitude,
                         initialLabel = key.label,

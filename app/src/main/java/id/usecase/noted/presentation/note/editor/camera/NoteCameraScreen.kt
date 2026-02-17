@@ -2,8 +2,8 @@ package id.usecase.noted.presentation.note.editor.camera
 
 import android.Manifest
 import android.app.Activity
-import android.content.pm.PackageManager
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -24,9 +24,9 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.BurstMode
@@ -38,7 +38,6 @@ import androidx.compose.material.icons.filled.GridOn
 import androidx.compose.material.icons.filled.Straighten
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.filled.TimerOff
-import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -75,6 +74,7 @@ import id.usecase.noted.presentation.components.camera.CameraLevelIndicator
 import id.usecase.noted.presentation.components.camera.CameraShutterButton
 import id.usecase.noted.presentation.components.camera.CameraZoomSlider
 import id.usecase.noted.presentation.components.camera.FocusIndicator
+import id.usecase.noted.presentation.components.feedback.FloatingPermissionRequestCard
 import id.usecase.noted.ui.theme.NotedTheme
 import kotlinx.coroutines.launch
 
@@ -90,9 +90,9 @@ fun NoteCameraScreenRoot(
     val lifecycleOwner = LocalLifecycleOwner.current
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
-    
+
     val state by viewModel.state.collectAsStateWithLifecycle()
-    
+
     var hasCameraPermission by remember {
         mutableStateOf(
             ContextCompat.checkSelfPermission(
@@ -102,7 +102,7 @@ fun NoteCameraScreenRoot(
         )
     }
     var isPermanentlyDenied by remember { mutableStateOf(false) }
-    
+
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission(),
     ) { granted ->
@@ -125,7 +125,7 @@ fun NoteCameraScreenRoot(
                 CameraIntent.Initialize(
                     context = context,
                     lifecycleOwner = lifecycleOwner,
-                )
+                ),
             )
         }
     }
@@ -138,6 +138,7 @@ fun NoteCameraScreenRoot(
                         snackbarHostState.showSnackbar(effect.message)
                     }
                 }
+
                 is CameraEffect.PhotoCaptured -> {
                     onPhotoCaptured(effect.uri)
                 }
@@ -201,10 +202,42 @@ private fun NoteCameraScreen(
                     showCameraPreview = showCameraPreview,
                 )
             } else {
-                PermissionDeniedContent(
-                    isPermanentlyDenied = isPermanentlyDenied,
-                    onRequestPermission = onRequestPermission,
-                )
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.Black),
+                ) {
+                    CameraIconButton(
+                        icon = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = "Navigate back",
+                        onClick = onNavigateBack,
+                        isSelected = true,
+                        modifier = Modifier
+                            .statusBarsPadding()
+                            .padding(start = 16.dp, top = 16.dp)
+                            .align(Alignment.TopStart),
+                    )
+
+                    FloatingPermissionRequestCard(
+                        title = "Izin Kamera",
+                        message = if (isPermanentlyDenied) {
+                            "Izin kamera ditolak permanen. Silakan aktifkan lewat app settings."
+                        } else {
+                            "Izin kamera dibutuhkan untuk mengambil foto catatan."
+                        },
+                        actionLabel = if (isPermanentlyDenied) {
+                            "Open Settings"
+                        } else {
+                            "Grant Permission"
+                        },
+                        onActionClick = onRequestPermission,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .align(Alignment.TopCenter)
+                            .statusBarsPadding()
+                            .padding(horizontal = 16.dp, vertical = 84.dp),
+                    )
+                }
             }
         }
     }
@@ -220,7 +253,7 @@ private fun CameraContent(
 ) {
     val context = LocalContext.current
     val previewView = remember(context) { PreviewView(context) }
-    
+
     var focusPoint by remember { mutableStateOf<Offset?>(null) }
     var showFocusIndicator by remember { mutableStateOf(false) }
 
@@ -312,7 +345,7 @@ private fun CameraContent(
                     icon = Icons.AutoMirrored.Filled.ArrowBack,
                     contentDescription = "Navigate back",
                     onClick = onNavigateBack,
-                    isSelected = true
+                    isSelected = true,
                 )
 
                 CameraIconButton(
@@ -325,7 +358,7 @@ private fun CameraContent(
                     onClick = { onIntent(CameraIntent.ToggleFlash) },
                     isSelected = state.flashMode != FlashMode.OFF,
                 )
-                
+
                 CameraIconButton(
                     icon = if (state.timerSeconds != null) Icons.Default.Timer else Icons.Default.TimerOff,
                     contentDescription = "Timer: ${state.timerSeconds?.toString() ?: "Off"}",
@@ -339,14 +372,14 @@ private fun CameraContent(
                     },
                     isSelected = state.timerSeconds != null,
                 )
-                
+
                 CameraIconButton(
                     icon = Icons.Default.GridOn,
                     contentDescription = "Grid",
                     onClick = { onIntent(CameraIntent.ToggleGrid) },
                     isSelected = state.isGridEnabled,
                 )
-                
+
                 CameraIconButton(
                     icon = Icons.Default.Straighten,
                     contentDescription = "Level",
@@ -389,17 +422,19 @@ private fun CameraContent(
                 onClick = { onIntent(CameraIntent.ToggleBurstMode) },
                 isSelected = state.isBurstMode,
             )
-            
+
             CameraShutterButton(
                 onClick = { onIntent(CameraIntent.CapturePhoto) },
                 onLongPress = if (state.isBurstMode) {
                     { onIntent(CameraIntent.CapturePhoto) }
-                } else null,
+                } else {
+                    null
+                },
                 isCapturing = state.isCapturing,
                 isBurstMode = state.isBurstMode,
                 size = 80,
             )
-            
+
             CameraIconButton(
                 icon = Icons.Default.FlipCameraAndroid,
                 contentDescription = "Switch camera",
@@ -454,37 +489,6 @@ private fun CameraContent(
                     onPhotoCaptured(photoUri)
                 },
             )
-        }
-    }
-}
-
-@Composable
-private fun PermissionDeniedContent(
-    isPermanentlyDenied: Boolean,
-    onRequestPermission: () -> Unit,
-) {
-    Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center,
-    ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            Text(
-                text = if (isPermanentlyDenied) {
-                    "Camera permission is permanently denied. Please enable it in app settings."
-                } else {
-                    "Camera permission is required to take photos."
-                },
-                style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.padding(horizontal = 16.dp)
-            )
-            Button(
-                onClick = onRequestPermission,
-            ) {
-                Text(if (isPermanentlyDenied) "Open Settings" else "Grant Permission")
-            }
         }
     }
 }

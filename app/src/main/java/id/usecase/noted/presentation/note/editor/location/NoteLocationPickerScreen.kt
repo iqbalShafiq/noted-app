@@ -1,17 +1,24 @@
 package id.usecase.noted.presentation.note.editor.location
 
+import android.annotation.SuppressLint
 import android.Manifest
 import android.content.pm.PackageManager
 import android.location.Geocoder
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -19,8 +26,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import com.google.android.gms.location.LocationServices
@@ -38,10 +49,15 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import java.util.Locale
 import kotlin.coroutines.resume
+import id.usecase.noted.presentation.components.content.InfoRow
+import id.usecase.noted.presentation.components.content.InfoRowCompact
+import id.usecase.noted.presentation.components.feedback.ErrorState
+import id.usecase.noted.presentation.components.feedback.FloatingPermissionRequestCard
 import id.usecase.noted.presentation.components.navigation.NotedTopAppBar
+import id.usecase.noted.ui.theme.NotedTheme
 
 @Composable
-fun NoteLocationPickerScreen(
+fun NoteLocationPickerScreenRoot(
     initialLatitude: Double?,
     initialLongitude: Double?,
     initialLabel: String?,
@@ -71,6 +87,16 @@ fun NoteLocationPickerScreen(
         contract = ActivityResultContracts.RequestMultiplePermissions(),
     ) {
         hasLocationPermission = context.hasLocationPermission()
+    }
+    val requestLocationPermission = remember(permissionLauncher) {
+        {
+            permissionLauncher.launch(
+                arrayOf(
+                    Manifest.permission.ACCESS_FINE_LOCATION,
+                    Manifest.permission.ACCESS_COARSE_LOCATION,
+                ),
+            )
+        }
     }
     val initialLocation = remember(initialLatitude, initialLongitude, initialLabel) {
         if (initialLatitude != null && initialLongitude != null) {
@@ -104,12 +130,7 @@ fun NoteLocationPickerScreen(
         }
 
         if (!hasLocationPermission) {
-            permissionLauncher.launch(
-                arrayOf(
-                    Manifest.permission.ACCESS_FINE_LOCATION,
-                    Manifest.permission.ACCESS_COARSE_LOCATION,
-                ),
-            )
+            requestLocationPermission()
             return@LaunchedEffect
         }
 
@@ -130,59 +151,47 @@ fun NoteLocationPickerScreen(
         )
     }
 
-    Scaffold(
-        modifier = modifier.fillMaxSize(),
-        topBar = {
-            NotedTopAppBar(
-                title = "Tag Lokasi",
-                onNavigateBack = onNavigateBack,
-            )
-        },
-        bottomBar = {
-            if (mapsApiKey.isNotBlank()) {
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    selectedLocation?.let { picked ->
-                        Text(text = "Lokasi: ${picked.label}")
-                        Text(text = "Titik: ${formatCoordinate(picked.latLng.latitude, picked.latLng.longitude)}")
-                    }
-                    Button(
-                        onClick = {
-                            val picked = selectedLocation ?: return@Button
-                            onTagLocation(
-                                picked.latLng.latitude,
-                                picked.latLng.longitude,
-                                picked.label,
-                            )
-                        },
-                        enabled = selectedLocation != null,
-                    ) {
-                        Text("Tag Lokasi Ini")
-                    }
-                }
+    LaunchedEffect(selectedLocation?.latLng, selectedLocation?.shouldReverseGeocode) {
+        val picked = selectedLocation ?: return@LaunchedEffect
+        if (!picked.shouldReverseGeocode) {
+            return@LaunchedEffect
+        }
+
+        val latLng = picked.latLng
+        val label = reverseGeocodeLabel(
+            context = context,
+            latitude = latLng.latitude,
+            longitude = latLng.longitude,
+        )
+        selectedLocation = selectedLocation?.copy(
+            label = label,
+            shouldReverseGeocode = false,
+        )
+    }
+
+    NoteLocationPickerScreen(
+        uiState = NoteLocationPickerUiState(
+            isMapsApiKeyMissing = mapsApiKey.isBlank(),
+            hasLocationPermission = hasLocationPermission,
+            selectedLocationLabel = selectedLocation?.label,
+            selectedCoordinate = selectedLocation?.latLng?.let {
+                formatCoordinate(it.latitude, it.longitude)
+            },
+        ),
+        onRequestLocationPermission = requestLocationPermission,
+        onTagLocation = {
+            selectedLocation?.let { picked ->
+                onTagLocation(
+                    picked.latLng.latitude,
+                    picked.latLng.longitude,
+                    picked.label,
+                )
             }
         },
-    ) { innerPadding ->
-        if (mapsApiKey.isBlank()) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding)
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                Text("Google Maps API key belum diset. Tambahkan MAPS_API_KEY di gradle properties.")
-                Button(onClick = onNavigateBack) {
-                    Text("Kembali")
-                }
-            }
-        } else {
+        onNavigateBack = onNavigateBack,
+        mapContent = { mapModifier ->
             GoogleMap(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding),
+                modifier = mapModifier,
                 cameraPositionState = cameraPositionState,
                 properties = MapProperties(isMyLocationEnabled = hasLocationPermission),
                 uiSettings = MapUiSettings(myLocationButtonEnabled = hasLocationPermission),
@@ -201,26 +210,184 @@ fun NoteLocationPickerScreen(
                     )
                 }
             }
+        },
+        modifier = modifier,
+    )
+}
 
-            LaunchedEffect(selectedLocation?.latLng, selectedLocation?.shouldReverseGeocode) {
-                val picked = selectedLocation ?: return@LaunchedEffect
-                if (!picked.shouldReverseGeocode) {
-                    return@LaunchedEffect
+@Composable
+fun NoteLocationPickerScreen(
+    uiState: NoteLocationPickerUiState,
+    onRequestLocationPermission: () -> Unit,
+    onTagLocation: () -> Unit,
+    onNavigateBack: () -> Unit,
+    mapContent: @Composable (Modifier) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Scaffold(
+        modifier = modifier.fillMaxSize(),
+        topBar = {
+            NotedTopAppBar(
+                title = "Tag Lokasi",
+                onNavigateBack = onNavigateBack,
+            )
+        },
+    ) { innerPadding ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding),
+        ) {
+            if (uiState.isMapsApiKeyMissing) {
+                ErrorState(
+                    message = "Google Maps API key belum diset. Tambahkan MAPS_API_KEY di gradle properties.",
+                    onRetry = onNavigateBack,
+                    retryButtonText = "Kembali",
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp),
+                )
+                return@Box
+            }
+
+            mapContent(Modifier.fillMaxSize())
+
+            if (!uiState.hasLocationPermission) {
+                FloatingPermissionRequestCard(
+                    title = "Akses Lokasi",
+                    message = "Izin lokasi dibutuhkan untuk menentukan posisi saat ini di peta.",
+                    actionLabel = "Izinkan Lokasi",
+                    onActionClick = onRequestLocationPermission,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 12.dp)
+                )
+            }
+
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp)
+                    .align(Alignment.BottomCenter),
+                tonalElevation = 8.dp,
+                shadowElevation = 12.dp,
+                shape = MaterialTheme.shapes.extraLarge,
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                ) {
+                    if (uiState.selectedLocationLabel != null && uiState.selectedCoordinate != null) {
+                        InfoRow(
+                            label = "Lokasi",
+                            value = uiState.selectedLocationLabel,
+                            showDivider = true,
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        InfoRowCompact(
+                            label = "Koordinat",
+                            value = uiState.selectedCoordinate,
+                        )
+                    } else {
+                        Text("Ketuk peta untuk memilih lokasi yang ingin ditandai.")
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Button(
+                        modifier = Modifier.fillMaxWidth(),
+                        onClick = onTagLocation,
+                        enabled = uiState.hasSelectedLocation,
+                    ) {
+                        Text("Tag Lokasi Ini")
+                    }
                 }
-
-                val latLng = picked.latLng
-                val label = reverseGeocodeLabel(
-                    context = context,
-                    latitude = latLng.latitude,
-                    longitude = latLng.longitude,
-                )
-                selectedLocation = selectedLocation?.copy(
-                    label = label,
-                    shouldReverseGeocode = false,
-                )
             }
         }
     }
+}
+
+@Composable
+private fun MapPreviewPlaceholder(modifier: Modifier = Modifier) {
+    Box(
+        modifier = modifier
+            .background(
+                brush = Brush.linearGradient(
+                    colors = listOf(
+                        Color(0xFFBFD8D2),
+                        Color(0xFFA8C8E8),
+                        Color(0xFFE8DDBF),
+                    ),
+                ),
+            ),
+    )
+}
+
+@Preview(showBackground = true, name = "Selected Location")
+@Composable
+private fun NoteLocationPickerScreenSelectedPreview() {
+    NotedTheme {
+        NoteLocationPickerScreen(
+            uiState = NoteLocationPickerUiState(
+                hasLocationPermission = true,
+                selectedLocationLabel = "Jl. Sudirman No. 12, Jakarta",
+                selectedCoordinate = "-6.20880, 106.84560",
+            ),
+            onRequestLocationPermission = {},
+            onTagLocation = {},
+            onNavigateBack = {},
+            mapContent = { mapModifier ->
+                MapPreviewPlaceholder(modifier = mapModifier)
+            },
+        )
+    }
+}
+
+@Preview(showBackground = true, name = "Permission Prompt")
+@Composable
+private fun NoteLocationPickerScreenPermissionPromptPreview() {
+    NotedTheme {
+        NoteLocationPickerScreen(
+            uiState = NoteLocationPickerUiState(
+                hasLocationPermission = false,
+            ),
+            onRequestLocationPermission = {},
+            onTagLocation = {},
+            onNavigateBack = {},
+            mapContent = { mapModifier ->
+                MapPreviewPlaceholder(modifier = mapModifier)
+            },
+        )
+    }
+}
+
+@Preview(showBackground = true, name = "Missing API Key")
+@Composable
+private fun NoteLocationPickerScreenApiKeyMissingPreview() {
+    NotedTheme {
+        NoteLocationPickerScreen(
+            uiState = NoteLocationPickerUiState(
+                isMapsApiKeyMissing = true,
+                hasLocationPermission = false,
+            ),
+            onRequestLocationPermission = {},
+            onTagLocation = {},
+            onNavigateBack = {},
+            mapContent = { mapModifier ->
+                MapPreviewPlaceholder(modifier = mapModifier)
+            },
+        )
+    }
+}
+
+data class NoteLocationPickerUiState(
+    val isMapsApiKeyMissing: Boolean = false,
+    val hasLocationPermission: Boolean = false,
+    val selectedLocationLabel: String? = null,
+    val selectedCoordinate: String? = null,
+) {
+    val hasSelectedLocation: Boolean
+        get() = selectedLocationLabel != null && selectedCoordinate != null
 }
 
 private data class PickedLocation(
@@ -248,6 +415,7 @@ private fun android.content.Context.hasLocationPermission(): Boolean {
     return hasFineLocation || hasCoarseLocation
 }
 
+@SuppressLint("MissingPermission")
 private suspend fun com.google.android.gms.location.FusedLocationProviderClient.awaitCurrentLocation(): android.location.Location? {
     return suspendCancellableCoroutine { continuation ->
         val cancellationTokenSource = com.google.android.gms.tasks.CancellationTokenSource()
