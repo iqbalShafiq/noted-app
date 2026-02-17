@@ -1,6 +1,6 @@
 package id.usecase.backend
 
-import id.usecase.backend.auth.security.JwtService
+import id.usecase.backend.service.auth.JwtService
 import id.usecase.backend.di.configureDependencyInjection
 import id.usecase.backend.domain.auth.AuthRepository
 import id.usecase.backend.plugins.configureRouting

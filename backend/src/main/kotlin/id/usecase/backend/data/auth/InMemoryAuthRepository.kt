@@ -2,6 +2,7 @@ package id.usecase.backend.data.auth
 
 import id.usecase.backend.domain.auth.AuthRepository
 import id.usecase.backend.domain.auth.AuthUser
+import id.usecase.backend.domain.auth.UserStatistics
 import java.util.UUID
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -99,8 +100,8 @@ class InMemoryAuthRepository : AuthRepository {
         }
     }
 
-    override suspend fun getUserStatistics(userId: String): id.usecase.backend.auth.domain.UserStatistics {
-        return id.usecase.backend.auth.domain.UserStatistics(
+    override suspend fun getUserStatistics(userId: String): UserStatistics {
+        return UserStatistics(
             totalNotes = 0,
             notesShared = 0,
             notesReceived = 0,

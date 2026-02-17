@@ -1,8 +1,8 @@
-package id.usecase.backend.sync.presentation
+package id.usecase.backend.presentation.sync
 
 import id.usecase.backend.plugins.AUTH_JWT
 import id.usecase.backend.plugins.requireUserId
-import id.usecase.backend.sync.service.NoteSyncService
+import id.usecase.backend.service.sync.NoteSyncService
 import id.usecase.noted.shared.note.SyncPushRequest
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.auth.authenticate

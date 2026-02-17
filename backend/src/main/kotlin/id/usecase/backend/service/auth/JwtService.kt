@@ -1,4 +1,4 @@
-package id.usecase.backend.auth.security
+package id.usecase.backend.service.auth
 
 import com.auth0.jwt.JWT
 import com.auth0.jwt.JWTVerifier

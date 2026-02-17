@@ -1,7 +1,7 @@
-package id.usecase.backend.note.presentation
+package id.usecase.backend.presentation.note
 
-import id.usecase.backend.note.service.NoteHistoryService
-import id.usecase.backend.note.service.NoteSharingService
+import id.usecase.backend.service.note.NoteHistoryService
+import id.usecase.backend.service.note.NoteSharingService
 import id.usecase.backend.plugins.AUTH_JWT
 import id.usecase.backend.plugins.ErrorResponse
 import id.usecase.backend.plugins.requireUserId

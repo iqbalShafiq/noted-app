@@ -2,9 +2,9 @@ package id.usecase.backend.di
 
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
-import id.usecase.backend.auth.security.JwtConfig
-import id.usecase.backend.auth.security.JwtService
-import id.usecase.backend.auth.security.toJwtConfig
+import id.usecase.backend.service.auth.JwtConfig
+import id.usecase.backend.service.auth.JwtService
+import id.usecase.backend.service.auth.toJwtConfig
 import id.usecase.backend.data.auth.InMemoryAuthRepository
 import id.usecase.backend.data.auth.PostgresAuthRepository
 import id.usecase.backend.data.note.InMemoryNoteHistoryRepository

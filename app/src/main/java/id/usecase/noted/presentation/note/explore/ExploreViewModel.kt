@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -49,6 +50,19 @@ class ExploreViewModel(
             }
 
             exploreRepository.exploreNotes(limit = 50)
+                .catch { error ->
+                    _state.update {
+                        it.copy(
+                            isLoading = false,
+                            errorMessage = error.message ?: "Gagal memuat note",
+                        )
+                    }
+                    _effect.trySend(
+                        ExploreEffect.ShowMessage(
+                            error.message ?: "Gagal memuat note",
+                        ),
+                    )
+                }
                 .collect { result ->
                     result
                         .onSuccess { notes ->

@@ -1,6 +1,6 @@
-package id.usecase.backend.user
+package id.usecase.backend.presentation.user
 
-import id.usecase.backend.auth.domain.AuthRepository
+import id.usecase.backend.domain.auth.AuthRepository
 import id.usecase.backend.plugins.requireUserId
 import id.usecase.noted.shared.user.GetUserProfileResponse
 import id.usecase.noted.shared.user.UpdateProfileRequest

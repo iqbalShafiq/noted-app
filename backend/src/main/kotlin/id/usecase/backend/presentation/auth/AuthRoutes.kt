@@ -1,6 +1,6 @@
-package id.usecase.backend.auth.presentation
+package id.usecase.backend.presentation.auth
 
-import id.usecase.backend.auth.service.AuthService
+import id.usecase.backend.service.auth.AuthService
 import id.usecase.noted.shared.auth.AuthForgotPasswordRequest
 import id.usecase.noted.shared.auth.AuthLoginRequest
 import id.usecase.noted.shared.auth.AuthRegisterRequest

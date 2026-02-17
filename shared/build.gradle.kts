@@ -4,9 +4,9 @@ plugins {
 }
 
 kotlin {
-    jvmToolchain(17)
+    jvmToolchain(21)
 }
 
 dependencies {
-    api("org.jetbrains.kotlinx:kotlinx-serialization-json:1.10.0")
+    api(libs.kotlinx.serialization.json)
 }
