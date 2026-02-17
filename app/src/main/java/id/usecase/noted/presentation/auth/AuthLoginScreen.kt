@@ -3,24 +3,13 @@ package id.usecase.noted.presentation.auth
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.imePadding
-import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.ClickableText
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Person
-import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -36,6 +25,11 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import id.usecase.noted.presentation.components.auth.AuthFormContainer
+import id.usecase.noted.presentation.components.auth.AuthFormLayout
+import id.usecase.noted.presentation.components.auth.AuthHeader
+import id.usecase.noted.presentation.components.auth.AuthSubmitButton
+import id.usecase.noted.presentation.components.auth.AuthTextField
 import id.usecase.noted.ui.theme.NotedTheme
 
 @Composable
@@ -74,49 +68,14 @@ fun AuthLoginScreen(
     onIntent: (AuthIntent) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val scrollState = rememberScrollState()
-
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .statusBarsPadding()
-            .navigationBarsPadding()
-            .imePadding()
-            .verticalScroll(scrollState)
-            .padding(horizontal = 24.dp, vertical = 16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Spacer(modifier = Modifier.height(48.dp))
-
-        // App Logo/Icon area
-        Icon(
-            imageVector = Icons.Default.Lock,
-            contentDescription = null,
-            modifier = Modifier
-                .height(64.dp)
-                .fillMaxWidth(),
-            tint = MaterialTheme.colorScheme.primary,
-        )
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        // Title
-        Text(
-            text = "Selamat Datang",
-            style = MaterialTheme.typography.headlineMedium,
-            color = MaterialTheme.colorScheme.onSurface,
-        )
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        // Subtitle
-        Text(
-            text = "Masuk ke akun Noted Anda",
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-
+    AuthFormLayout(modifier = modifier) {
         Spacer(modifier = Modifier.height(32.dp))
+
+        AuthHeader(
+            title = "Selamat Datang",
+            subtitle = "Masuk ke akun Noted Anda",
+            icon = Icons.Default.Lock,
+        )
 
         // Login form
         LoginFormContent(
@@ -124,7 +83,7 @@ fun AuthLoginScreen(
             onIntent = onIntent,
         )
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(8.dp))
 
         // Register link
         val annotatedString = buildAnnotatedString {
@@ -166,43 +125,20 @@ private fun LoginFormContent(
     state: AuthState,
     onIntent: (AuthIntent) -> Unit,
 ) {
-    Column(
-        modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
-    ) {
-        OutlinedTextField(
+    AuthFormContainer {
+        AuthTextField(
             value = state.usernameInput,
             onValueChange = { value -> onIntent(AuthIntent.UsernameChanged(value)) },
-            modifier = Modifier.fillMaxWidth(),
-            enabled = !state.isSubmitting,
-            label = { Text("Username") },
-            placeholder = { Text("Masukkan username") },
-            singleLine = true,
-            leadingIcon = {
-                Icon(
-                    imageVector = Icons.Default.Person,
-                    contentDescription = null,
-                )
-            },
-            shape = MaterialTheme.shapes.medium,
+            label = "Username",
+            leadingIcon = Icons.Default.Person,
         )
 
-        OutlinedTextField(
+        AuthTextField(
             value = state.passwordInput,
             onValueChange = { value -> onIntent(AuthIntent.PasswordChanged(value)) },
-            modifier = Modifier.fillMaxWidth(),
-            enabled = !state.isSubmitting,
-            label = { Text("Password") },
-            placeholder = { Text("Masukkan password") },
-            singleLine = true,
+            label = "Password",
+            leadingIcon = Icons.Default.Lock,
             visualTransformation = PasswordVisualTransformation(),
-            leadingIcon = {
-                Icon(
-                    imageVector = Icons.Default.Lock,
-                    contentDescription = null,
-                )
-            },
-            shape = MaterialTheme.shapes.medium,
         )
 
         // Forgot password link
@@ -214,31 +150,16 @@ private fun LoginFormContent(
             Text("Lupa password?")
         }
 
-        Spacer(modifier = Modifier.height(8.dp))
-
         // Submit button
-        Button(
+        AuthSubmitButton(
+            text = "Masuk",
             onClick = { onIntent(AuthIntent.LoginSubmitClicked) },
+            isLoading = state.isSubmitting,
             enabled = !state.isSubmitting,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(48.dp),
-            shape = MaterialTheme.shapes.medium,
-        ) {
-            if (state.isSubmitting) {
-                CircularProgressIndicator(
-                    modifier = Modifier.height(24.dp),
-                    strokeWidth = 2.dp,
-                    color = MaterialTheme.colorScheme.onPrimary,
-                )
-            } else {
-                Text("Masuk")
-            }
-        }
+        )
 
         // Error message
         state.syncStatus.lastErrorMessage?.let { message ->
-            Spacer(modifier = Modifier.height(8.dp))
             Text(
                 text = message,
                 style = MaterialTheme.typography.bodySmall,
