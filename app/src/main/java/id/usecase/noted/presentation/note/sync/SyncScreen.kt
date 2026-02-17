@@ -18,14 +18,12 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.background
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -34,8 +32,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import id.usecase.noted.presentation.components.feedback.EmptyState
+import id.usecase.noted.presentation.components.feedback.ErrorState
+import id.usecase.noted.presentation.components.feedback.LoadingState
+import id.usecase.noted.presentation.components.navigation.NotedTopAppBar
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -74,7 +75,6 @@ fun SyncScreenRoot(
     )
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SyncScreen(
     state: SyncState,
@@ -87,16 +87,9 @@ fun SyncScreen(
             .statusBarsPadding()
             .navigationBarsPadding(),
         topBar = {
-            TopAppBar(
-                title = { Text("Sinkronisasi") },
-                navigationIcon = {
-                    IconButton(onClick = { onIntent(SyncIntent.NavigateBackClicked) }) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Kembali",
-                        )
-                    }
-                },
+            NotedTopAppBar(
+                title = "Sinkronisasi",
+                onNavigateBack = { onIntent(SyncIntent.NavigateBackClicked) },
             )
         },
     ) { paddingValues ->
