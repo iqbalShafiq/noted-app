@@ -153,22 +153,10 @@ private fun VisibilityMessage(visibility: NoteVisibility) {
         NoteVisibility.PUBLIC -> "This note is public and can be discovered by anyone."
     }
 
-    val icon = when (visibility) {
-        NoteVisibility.PRIVATE -> Icons.Outlined.Lock
-        NoteVisibility.LINK_SHARED -> Icons.Filled.Link
-        NoteVisibility.PUBLIC -> Icons.Filled.Share
-    }
-
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.primary,
-        )
         Text(
             text = message,
             style = MaterialTheme.typography.bodyMedium,

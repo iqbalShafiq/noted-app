@@ -354,6 +354,7 @@ class NoteEditorViewModel(
         val currentState = state.value
         val blocks = currentState.blocks
         val editingNoteId = currentState.editingNoteId
+        val visibility = currentState.visibility
         val hasText = blocks.any { block ->
             block is NoteEditorBlock.Text && block.value.text.trim().isNotEmpty()
         }
@@ -388,9 +389,13 @@ class NoteEditorViewModel(
         viewModelScope.launch {
             runCatching {
                 if (editingNoteId == null) {
-                    noteRepository.addNote(content)
+                    noteRepository.addNote(content = content, visibility = visibility)
                 } else {
-                    noteRepository.updateNote(editingNoteId, content)
+                    noteRepository.updateNote(
+                        noteId = editingNoteId,
+                        content = content,
+                        visibility = visibility,
+                    )
                         ?: error("Note tidak ditemukan")
                 }
             }.onSuccess {

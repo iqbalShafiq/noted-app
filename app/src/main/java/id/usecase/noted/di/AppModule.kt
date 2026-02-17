@@ -152,7 +152,6 @@ val appModule = module {
     }
     viewModel {
         SyncViewModel(
-            noteRepository = get(),
             noteSyncCoordinator = get(),
             noteDao = get(),
         )

@@ -2,11 +2,9 @@ package id.usecase.noted.presentation.note.sync
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import id.usecase.noted.domain.NoteRepository
 import id.usecase.noted.data.sync.LocalSyncStatus
 import id.usecase.noted.data.local.NoteDao
 import id.usecase.noted.data.sync.NoteSyncCoordinator
-import id.usecase.noted.data.sync.NoteSyncStatus
 import id.usecase.noted.domain.NoteContentCodec
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
@@ -21,7 +19,6 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 class SyncViewModel(
-    private val noteRepository: NoteRepository,
     private val noteSyncCoordinator: NoteSyncCoordinator,
     private val noteDao: NoteDao,
 ) : ViewModel() {
@@ -46,9 +43,9 @@ class SyncViewModel(
                 startObservePendingNotes()
             }
 
-            SyncIntent.SyncNowClicked -> syncNow()
-            SyncIntent.UploadNowClicked -> uploadNow()
-            SyncIntent.ImportNowClicked -> importNow()
+            SyncIntent.UploadClicked -> uploadNow()
+            SyncIntent.AccountClicked -> _effect.trySend(SyncEffect.NavigateToAccount)
+            SyncIntent.LoginClicked -> _effect.trySend(SyncEffect.NavigateToLogin)
 
             is SyncIntent.RetryNoteClicked -> retryNote(intent.noteId)
 
@@ -103,48 +100,32 @@ class SyncViewModel(
         }
     }
 
-    private fun syncNow() {
-        viewModelScope.launch {
-            runCatching {
-                noteSyncCoordinator.syncNow()
-            }.onSuccess {
-                _effect.trySend(SyncEffect.ShowMessage("Sinkronisasi berhasil"))
-            }.onFailure { error ->
-                _effect.trySend(
-                    SyncEffect.ShowMessage(
-                        error.message ?: "Sinkronisasi gagal",
-                    ),
-                )
-            }
-        }
-    }
-
     private fun uploadNow() {
+        val currentSyncStatus = state.value.syncStatus
+        if (!currentSyncStatus.isLoggedIn) {
+            _effect.trySend(SyncEffect.ShowMessage("Login diperlukan untuk upload"))
+            return
+        }
+
+        if (!currentSyncStatus.isOnline) {
+            _effect.trySend(SyncEffect.ShowMessage("Tidak ada koneksi internet"))
+            return
+        }
+
+        if (currentSyncStatus.isSyncing) {
+            _effect.trySend(SyncEffect.ShowMessage("Sinkronisasi sedang berjalan"))
+            return
+        }
+
         viewModelScope.launch {
             runCatching {
                 noteSyncCoordinator.uploadPendingNow()
             }.onSuccess {
-                _effect.trySend(SyncEffect.ShowMessage("Upload manual berhasil"))
+                _effect.trySend(SyncEffect.ShowMessage("Upload berhasil"))
             }.onFailure { error ->
                 _effect.trySend(
                     SyncEffect.ShowMessage(
-                        error.message ?: "Upload manual gagal",
-                    ),
-                )
-            }
-        }
-    }
-
-    private fun importNow() {
-        viewModelScope.launch {
-            runCatching {
-                noteSyncCoordinator.importNow()
-            }.onSuccess {
-                _effect.trySend(SyncEffect.ShowMessage("Import dari server berhasil"))
-            }.onFailure { error ->
-                _effect.trySend(
-                    SyncEffect.ShowMessage(
-                        error.message ?: "Import dari server gagal",
+                        error.message ?: "Upload gagal",
                     ),
                 )
             }
@@ -163,6 +144,7 @@ class SyncViewModel(
                         noteDao.updateContent(
                             noteId = noteId,
                             content = note.content,
+                            visibility = note.visibility,
                             updatedAt = System.currentTimeMillis(),
                             ownerUserId = ownerUserId,
                             syncStatus = LocalSyncStatus.PENDING_UPSERT.name,

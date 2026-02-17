@@ -52,6 +52,7 @@ interface NoteDao {
         """
         UPDATE notes
         SET content = :content,
+            visibility = :visibility,
             updated_at = :updatedAt,
             owner_user_id = :ownerUserId,
             sync_status = :syncStatus,
@@ -62,6 +63,7 @@ interface NoteDao {
     suspend fun updateContent(
         noteId: Long,
         content: String,
+        visibility: String,
         updatedAt: Long,
         ownerUserId: String?,
         syncStatus: String,

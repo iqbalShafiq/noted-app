@@ -23,7 +23,9 @@ import io.ktor.client.plugins.ClientRequestException
 import io.ktor.client.plugins.ServerResponseException
 import java.io.IOException
 import java.util.UUID
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -33,6 +35,7 @@ import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -47,8 +50,11 @@ class RoomNoteRepository(
     private val appScope: CoroutineScope,
     private val clock: () -> Long = { System.currentTimeMillis() },
     private val idGenerator: () -> String = { UUID.randomUUID().toString() },
+    private val periodicSyncIntervalMillis: Long = DEFAULT_PERIODIC_SYNC_INTERVAL_MILLIS,
 ) : NoteRepository, NoteSyncCoordinator {
     private val syncMutex = Mutex()
+    private var periodicSyncJob: Job? = null
+    private var periodicSyncUserId: String? = null
 
     private val _session = MutableStateFlow(UserSession(userId = null, username = null, accessToken = null, deviceId = ""))
     override val session: StateFlow<UserSession> = _session.asStateFlow()
@@ -57,6 +63,8 @@ class RoomNoteRepository(
     override val syncStatus: StateFlow<NoteSyncStatus> = _syncStatus.asStateFlow()
 
     init {
+        require(periodicSyncIntervalMillis > 0L) { "periodicSyncIntervalMillis must be > 0" }
+
         appScope.launch {
             sessionStore.ensureInitialized()
 
@@ -72,7 +80,9 @@ class RoomNoteRepository(
                     )
                 }
 
-                if (session.userId == null) {
+                val sessionUserId = session.userId
+                if (sessionUserId == null) {
+                    stopPeriodicSync()
                     val anonymousPending = noteDao.countAnonymousLocalOnly()
                     _syncStatus.update { current ->
                         current.copy(
@@ -84,16 +94,20 @@ class RoomNoteRepository(
                     return@collect
                 }
 
-                noteDao.assignAnonymousNotesToOwner(session.userId)
-                refreshPendingCount(session.userId)
+                noteDao.assignAnonymousNotesToOwner(sessionUserId)
+                refreshPendingCount(sessionUserId)
 
-                if (isOnline) {
-                    syncNowInternal(
-                        mode = SyncRunMode.FULL,
-                        resetCursor = false,
-                        source = "auto",
-                    )
+                if (!isOnline) {
+                    stopPeriodicSync()
+                    return@collect
                 }
+
+                startPeriodicSyncIfNeeded(userId = sessionUserId)
+                syncNowInternal(
+                    mode = SyncRunMode.FULL,
+                    resetCursor = false,
+                    source = "auto",
+                )
             }
         }
     }
@@ -106,7 +120,7 @@ class RoomNoteRepository(
         return noteDao.getNoteById(noteId)?.toDomain()
     }
 
-    override suspend fun addNote(content: String): Note {
+    override suspend fun addNote(content: String, visibility: NoteVisibility): Note {
         val normalizedContent = content.trim()
         require(normalizedContent.isNotBlank()) { "Isi note tidak boleh kosong" }
 
@@ -126,7 +140,7 @@ class RoomNoteRepository(
                 updatedAt = now,
                 ownerUserId = currentSession.userId,
                 syncStatus = syncState.name,
-                visibility = id.usecase.noted.domain.NoteVisibility.PRIVATE.name,
+                visibility = visibility.name,
             ),
         )
 
@@ -137,7 +151,7 @@ class RoomNoteRepository(
         return note
     }
 
-    override suspend fun updateNote(noteId: Long, content: String): Note? {
+    override suspend fun updateNote(noteId: Long, content: String, visibility: NoteVisibility): Note? {
         val current = noteDao.getNoteById(noteId) ?: return null
         val normalizedContent = content.trim()
         require(normalizedContent.isNotBlank()) { "Isi note tidak boleh kosong" }
@@ -154,6 +168,7 @@ class RoomNoteRepository(
         val updatedRows = noteDao.updateContent(
             noteId = noteId,
             content = normalizedContent,
+            visibility = visibility.name,
             updatedAt = now,
             ownerUserId = ownerUserId,
             syncStatus = syncState.name,
@@ -237,6 +252,7 @@ class RoomNoteRepository(
 
     override suspend fun signOut() {
         sessionStore.signOut()
+        stopPeriodicSync()
         _syncStatus.update { current ->
             current.copy(
                 userId = null,
@@ -336,6 +352,31 @@ class RoomNoteRepository(
         }
     }
 
+    private fun startPeriodicSyncIfNeeded(userId: String) {
+        if (periodicSyncJob?.isActive == true && periodicSyncUserId == userId) {
+            return
+        }
+
+        periodicSyncJob?.cancel()
+        periodicSyncUserId = userId
+        periodicSyncJob = appScope.launch {
+            while (isActive) {
+                delay(periodicSyncIntervalMillis)
+                syncNowInternal(
+                    mode = SyncRunMode.FULL,
+                    resetCursor = false,
+                    source = "periodic",
+                )
+            }
+        }
+    }
+
+    private fun stopPeriodicSync() {
+        periodicSyncJob?.cancel()
+        periodicSyncJob = null
+        periodicSyncUserId = null
+    }
+
     private suspend fun syncNowInternal(
         mode: SyncRunMode,
         resetCursor: Boolean,
@@ -428,6 +469,16 @@ class RoomNoteRepository(
                     )
                 }
             }.onFailure { error ->
+                if (error is CancellationException) {
+                    _syncStatus.update { current ->
+                        current.copy(
+                            isSyncing = false,
+                            lastEventMessage = "Sinkronisasi dibatalkan",
+                        )
+                    }
+                    throw error
+                }
+
                 refreshPendingCount(userId)
                 val message = "Sinkronisasi gagal ($source): ${error.message}"
                 Log.e(TAG, message, error)
@@ -603,6 +654,7 @@ class RoomNoteRepository(
 
     private companion object {
         const val TAG = "RoomNoteRepository"
+        const val DEFAULT_PERIODIC_SYNC_INTERVAL_MILLIS = 15L * 60L * 1000L
     }
 }
 

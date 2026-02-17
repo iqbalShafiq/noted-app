@@ -8,35 +8,28 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.background
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material.icons.filled.Warning
-import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import id.usecase.noted.presentation.components.feedback.EmptyState
-import id.usecase.noted.presentation.components.feedback.ErrorState
-import id.usecase.noted.presentation.components.feedback.LoadingState
-import id.usecase.noted.presentation.components.navigation.NotedTopAppBar
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -46,6 +39,9 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import id.usecase.noted.data.sync.NoteSyncStatus
+import id.usecase.noted.presentation.components.navigation.NotedBottomAppBar
+import id.usecase.noted.presentation.components.navigation.NotedFloatingActionButton
+import id.usecase.noted.presentation.components.navigation.NotedTopAppBar
 import id.usecase.noted.ui.theme.NotedTheme
 import java.text.DateFormat
 import java.util.Date
@@ -55,6 +51,8 @@ fun SyncScreenRoot(
     viewModel: SyncViewModel,
     onShowMessage: (String) -> Unit,
     onNavigateBack: () -> Unit,
+    onNavigateToAccount: () -> Unit,
+    onNavigateToLogin: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -63,6 +61,8 @@ fun SyncScreenRoot(
         viewModel.effect.collect { effect ->
             when (effect) {
                 SyncEffect.NavigateBack -> onNavigateBack()
+                SyncEffect.NavigateToAccount -> onNavigateToAccount()
+                SyncEffect.NavigateToLogin -> onNavigateToLogin()
                 is SyncEffect.ShowMessage -> onShowMessage(effect.message)
             }
         }
@@ -82,14 +82,19 @@ fun SyncScreen(
     modifier: Modifier = Modifier,
 ) {
     Scaffold(
-        modifier = modifier
-            .fillMaxSize()
-            .statusBarsPadding()
-            .navigationBarsPadding(),
+        modifier = modifier.fillMaxSize(),
         topBar = {
             NotedTopAppBar(
                 title = "Sinkronisasi",
                 onNavigateBack = { onIntent(SyncIntent.NavigateBackClicked) },
+            )
+        },
+        bottomBar = {
+            SyncBottomBar(
+                isLoggedIn = state.syncStatus.isLoggedIn,
+                onUploadClicked = { onIntent(SyncIntent.UploadClicked) },
+                onAccountClicked = { onIntent(SyncIntent.AccountClicked) },
+                onLoginClicked = { onIntent(SyncIntent.LoginClicked) },
             )
         },
     ) { paddingValues ->
@@ -114,13 +119,15 @@ fun SyncScreen(
                     )
                 }
 
-                ActionButtonsSection(
-                    isSyncing = state.syncStatus.isSyncing,
-                    isLoggedIn = state.syncStatus.isLoggedIn,
-                    onSyncClicked = { onIntent(SyncIntent.SyncNowClicked) },
-                    onUploadClicked = { onIntent(SyncIntent.UploadNowClicked) },
-                    onImportClicked = { onIntent(SyncIntent.ImportNowClicked) },
-                )
+                if (!state.syncStatus.isLoggedIn) {
+                    Text(
+                        text = "Login diperlukan untuk sinkronisasi cloud.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
 
                 if (state.pendingNotes.isNotEmpty()) {
                     Text(
@@ -138,6 +145,37 @@ fun SyncScreen(
             }
         }
     }
+}
+
+@Composable
+private fun SyncBottomBar(
+    isLoggedIn: Boolean,
+    onUploadClicked: () -> Unit,
+    onAccountClicked: () -> Unit,
+    onLoginClicked: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    NotedBottomAppBar(
+        modifier = modifier,
+        actions = {
+            IconButton(
+                onClick = if (isLoggedIn) onAccountClicked else onLoginClicked,
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Person,
+                    contentDescription = if (isLoggedIn) "Akun" else "Login",
+                )
+            }
+        },
+        floatingActionButton = {
+            NotedFloatingActionButton(onClick = onUploadClicked) {
+                Icon(
+                    imageVector = Icons.Default.Sync,
+                    contentDescription = "Upload",
+                )
+            }
+        },
+    )
 }
 
 @Composable
@@ -296,55 +334,6 @@ private fun ProgressSection(
                 text = "Upload $uploadedCount/$totalToUpload",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-    }
-}
-
-@Composable
-private fun ActionButtonsSection(
-    isSyncing: Boolean,
-    isLoggedIn: Boolean,
-    onSyncClicked: () -> Unit,
-    onUploadClicked: () -> Unit,
-    onImportClicked: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Column(
-        modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        Button(
-            onClick = onSyncClicked,
-            enabled = !isSyncing && isLoggedIn,
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            Text("Sync Sekarang")
-        }
-
-        OutlinedButton(
-            onClick = onUploadClicked,
-            enabled = !isSyncing && isLoggedIn,
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            Text("Upload Manual")
-        }
-
-        OutlinedButton(
-            onClick = onImportClicked,
-            enabled = !isSyncing && isLoggedIn,
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            Text("Import dari Server")
-        }
-
-        if (!isLoggedIn) {
-            Text(
-                text = "Login diperlukan untuk sinkronisasi",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth(),
             )
         }
     }

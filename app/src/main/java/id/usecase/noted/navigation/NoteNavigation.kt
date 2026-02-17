@@ -141,6 +141,16 @@ fun NoteNavigation(
                                 backStack.add(NoteListNavKey)
                             }
                         },
+                        onNavigateToAccount = {
+                            if (backStack.lastOrNull() != AccountNavKey) {
+                                backStack.add(AccountNavKey)
+                            }
+                        },
+                        onNavigateToLogin = {
+                            if (backStack.lastOrNull() != AuthLoginNavKey) {
+                                backStack.add(AuthLoginNavKey)
+                            }
+                        },
                         modifier = Modifier.fillMaxSize(),
                     )
                 }

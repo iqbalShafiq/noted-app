@@ -8,6 +8,7 @@ import id.usecase.noted.data.sync.NoteSyncStatus
 import id.usecase.noted.data.sync.UserSession
 import id.usecase.noted.domain.Note
 import id.usecase.noted.domain.NoteHistory
+import id.usecase.noted.domain.NoteVisibility
 import id.usecase.noted.presentation.MainDispatcherRule
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
@@ -269,7 +270,7 @@ private class FakeListRepository(
         emitAll(notes)
     }
 
-    override suspend fun addNote(content: String): Note {
+    override suspend fun addNote(content: String, visibility: NoteVisibility): Note {
         val note = Note(
             id = notes.value.size.toLong() + 1,
             noteId = "new-${notes.value.size + 1}",
@@ -278,6 +279,7 @@ private class FakeListRepository(
             updatedAt = 10_000,
             ownerUserId = null,
             syncStatus = LocalSyncStatus.LOCAL_ONLY,
+            visibility = visibility,
         )
         notes.value = listOf(note) + notes.value
         return note
@@ -287,9 +289,9 @@ private class FakeListRepository(
         return notes.value.firstOrNull { note -> note.id == noteId }
     }
 
-    override suspend fun updateNote(noteId: Long, content: String): Note? {
+    override suspend fun updateNote(noteId: Long, content: String, visibility: NoteVisibility): Note? {
         val target = notes.value.firstOrNull { note -> note.id == noteId } ?: return null
-        val updated = target.copy(content = content)
+        val updated = target.copy(content = content, visibility = visibility)
         notes.value = notes.value.map { note -> if (note.id == noteId) updated else note }
         return updated
     }
