@@ -13,6 +13,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.layout.size
@@ -57,7 +60,12 @@ fun CameraIconButton(
 
     IconButton(
         onClick = onClick,
-        modifier = modifier.size(48.dp),
+        modifier = modifier
+            .size(48.dp)
+            .semantics {
+                this.contentDescription = contentDescription
+                this.selected = isSelected
+            },
         colors = IconButtonDefaults.iconButtonColors(
             containerColor = animatedContainerColor,
             contentColor = animatedContentColor
@@ -65,7 +73,7 @@ fun CameraIconButton(
     ) {
         Icon(
             imageVector = icon,
-            contentDescription = contentDescription,
+            contentDescription = null,
             tint = animatedContentColor
         )
     }

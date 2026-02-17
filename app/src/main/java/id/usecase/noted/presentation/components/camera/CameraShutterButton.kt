@@ -23,6 +23,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 
@@ -36,6 +40,7 @@ import androidx.compose.ui.unit.dp
  * @param isCapturing Whether the camera is currently capturing an image
  * @param isBurstMode Whether burst mode is active (affects outer ring color)
  * @param size Diameter of the shutter button in dp
+ * @param contentDescription Content description for accessibility and UI tests
  */
 @Composable
 fun CameraShutterButton(
@@ -44,7 +49,8 @@ fun CameraShutterButton(
     modifier: Modifier = Modifier,
     isCapturing: Boolean = false,
     isBurstMode: Boolean = false,
-    size: Int = 80
+    size: Int = 80,
+    contentDescription: String = "Camera shutter"
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
@@ -84,6 +90,10 @@ fun CameraShutterButton(
         modifier = modifier
             .size(size.dp)
             .scale(scaleAnimatable.value)
+            .semantics {
+                this.contentDescription = contentDescription
+                this.role = Role.Button
+            }
             .border(
                 width = 4.dp,
                 color = outerRingColor,

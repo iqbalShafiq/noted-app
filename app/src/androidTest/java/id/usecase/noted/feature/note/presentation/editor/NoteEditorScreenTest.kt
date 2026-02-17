@@ -7,6 +7,9 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.text.input.TextFieldValue
+import id.usecase.noted.presentation.note.editor.NoteEditorBlock
+import id.usecase.noted.presentation.note.editor.NoteEditorScreen
+import id.usecase.noted.presentation.note.editor.NoteEditorState
 import id.usecase.noted.ui.theme.NotedTheme
 import org.junit.Rule
 import org.junit.Test
