@@ -46,6 +46,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import id.usecase.noted.presentation.components.navigation.NotedTopAppBar
 import java.io.File
 
 @Composable
@@ -133,16 +134,9 @@ fun NoteCameraScreenRoot(
     Scaffold(
         modifier = modifier.fillMaxSize(),
         topBar = {
-            TopAppBar(
-                title = { Text("Kamera") },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
-                            contentDescription = "Kembali",
-                        )
-                    }
-                },
+            NotedTopAppBar(
+                title = "Kamera",
+                onNavigateBack = onNavigateBack,
             )
         },
         floatingActionButton = {
