@@ -2,7 +2,7 @@ package id.usecase.noted.presentation.note.sync
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import id.usecase.noted.data.NoteRepository
+import id.usecase.noted.domain.NoteRepository
 import id.usecase.noted.data.sync.LocalSyncStatus
 import id.usecase.noted.data.local.NoteDao
 import id.usecase.noted.data.sync.NoteSyncCoordinator

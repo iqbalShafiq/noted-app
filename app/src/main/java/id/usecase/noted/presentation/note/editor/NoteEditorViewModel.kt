@@ -5,7 +5,7 @@ import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import id.usecase.noted.data.NoteRepository
+import id.usecase.noted.domain.NoteRepository
 import id.usecase.noted.domain.NoteContentBlock
 import id.usecase.noted.domain.NoteContentCodec
 import id.usecase.noted.domain.NoteVisibility

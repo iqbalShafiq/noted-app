@@ -1,7 +1,7 @@
 package id.usecase.noted.presentation.note.list
 
-import id.usecase.noted.data.NoteHistoryRepository
-import id.usecase.noted.data.NoteRepository
+import id.usecase.noted.domain.NoteHistoryRepository
+import id.usecase.noted.domain.NoteRepository
 import id.usecase.noted.data.sync.LocalSyncStatus
 import id.usecase.noted.data.sync.NoteSyncCoordinator
 import id.usecase.noted.data.sync.NoteSyncStatus

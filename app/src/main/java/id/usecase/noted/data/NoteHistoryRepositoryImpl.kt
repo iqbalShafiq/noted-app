@@ -5,6 +5,7 @@ import id.usecase.noted.data.local.NoteHistoryEntity
 import id.usecase.noted.data.sync.NoteHistoryApi
 import id.usecase.noted.data.sync.SessionStore
 import id.usecase.noted.domain.NoteHistory
+import id.usecase.noted.domain.NoteHistoryRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 

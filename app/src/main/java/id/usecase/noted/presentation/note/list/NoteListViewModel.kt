@@ -2,8 +2,8 @@ package id.usecase.noted.presentation.note.list
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import id.usecase.noted.data.NoteHistoryRepository
-import id.usecase.noted.data.NoteRepository
+import id.usecase.noted.domain.NoteHistoryRepository
+import id.usecase.noted.domain.NoteRepository
 import id.usecase.noted.data.sync.NoteSyncCoordinator
 import id.usecase.noted.domain.Note
 import id.usecase.noted.domain.NoteContentCodec

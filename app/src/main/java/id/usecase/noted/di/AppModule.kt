@@ -1,9 +1,9 @@
 package id.usecase.noted.di
 
 import id.usecase.noted.BuildConfig
-import id.usecase.noted.data.NoteHistoryRepository
+import id.usecase.noted.domain.NoteHistoryRepository
 import id.usecase.noted.data.NoteHistoryRepositoryImpl
-import id.usecase.noted.data.NoteRepository
+import id.usecase.noted.domain.NoteRepository
 import id.usecase.noted.data.RoomNoteRepository
 import id.usecase.noted.data.local.NoteDatabase
 import id.usecase.noted.data.sync.AuthApi

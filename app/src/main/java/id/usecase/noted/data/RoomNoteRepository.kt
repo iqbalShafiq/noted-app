@@ -14,6 +14,7 @@ import id.usecase.noted.data.sync.NoteSyncStatus
 import id.usecase.noted.data.sync.SessionStore
 import id.usecase.noted.data.sync.UserSession
 import id.usecase.noted.domain.Note
+import id.usecase.noted.domain.NoteRepository
 import id.usecase.noted.domain.NoteVisibility
 import id.usecase.noted.shared.note.SyncMutationDto
 import id.usecase.noted.shared.note.SyncMutationType

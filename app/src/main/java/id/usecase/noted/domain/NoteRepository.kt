@@ -1,6 +1,5 @@
-package id.usecase.noted.data
+package id.usecase.noted.domain
 
-import id.usecase.noted.domain.Note
 import kotlinx.coroutines.flow.Flow
 
 interface NoteRepository {

@@ -5,8 +5,8 @@ import android.content.ClipboardManager
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import id.usecase.noted.data.NoteHistoryRepository
-import id.usecase.noted.data.NoteRepository
+import id.usecase.noted.domain.NoteHistoryRepository
+import id.usecase.noted.domain.NoteRepository
 import id.usecase.noted.data.sync.ExploreRepository
 import id.usecase.noted.data.sync.SessionStore
 import kotlinx.coroutines.Job
