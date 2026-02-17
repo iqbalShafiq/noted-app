@@ -9,8 +9,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Public
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -21,6 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import id.usecase.noted.domain.NoteVisibility
+import id.usecase.noted.presentation.components.content.NoteCard
 import id.usecase.noted.presentation.note.list.NoteListItemUi
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -36,50 +35,42 @@ fun NoteListItem(
         SimpleDateFormat("dd MMM yyyy, HH:mm", Locale.getDefault()).format(Date(note.createdAt))
     }
 
-    Card(
-        modifier = modifier.fillMaxWidth(),
+    NoteCard(
+        modifier = modifier,
         onClick = onClick,
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-        ),
     ) {
-        Column(
-            modifier = Modifier.padding(12.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.Top,
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Top,
-            ) {
-                Text(
-                    text = note.content,
-                    style = MaterialTheme.typography.bodyLarge,
-                    modifier = Modifier.weight(1f).padding(end = 12.dp),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                val visibilityIcon = when (note.visibility) {
-                    NoteVisibility.PRIVATE -> Icons.Default.Lock
-                    NoteVisibility.LINK_SHARED -> Icons.Default.Link
-                    NoteVisibility.PUBLIC -> Icons.Default.Public
-                }
-                val iconTint = when (note.visibility) {
-                    NoteVisibility.PRIVATE -> MaterialTheme.colorScheme.onSurfaceVariant
-                    NoteVisibility.LINK_SHARED -> MaterialTheme.colorScheme.primary
-                    NoteVisibility.PUBLIC -> MaterialTheme.colorScheme.primary
-                }
-                Icon(
-                    imageVector = visibilityIcon,
-                    contentDescription = note.visibility.toString(),
-                    tint = iconTint,
-                )
-            }
             Text(
-                text = formattedDate,
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                text = note.content,
+                style = MaterialTheme.typography.bodyLarge,
+                modifier = Modifier.weight(1f).padding(end = 12.dp),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            val visibilityIcon = when (note.visibility) {
+                NoteVisibility.PRIVATE -> Icons.Default.Lock
+                NoteVisibility.LINK_SHARED -> Icons.Default.Link
+                NoteVisibility.PUBLIC -> Icons.Default.Public
+            }
+            val iconTint = when (note.visibility) {
+                NoteVisibility.PRIVATE -> MaterialTheme.colorScheme.onSurfaceVariant
+                NoteVisibility.LINK_SHARED -> MaterialTheme.colorScheme.primary
+                NoteVisibility.PUBLIC -> MaterialTheme.colorScheme.primary
+            }
+            Icon(
+                imageVector = visibilityIcon,
+                contentDescription = note.visibility.toString(),
+                tint = iconTint,
             )
         }
+        Text(
+            text = formattedDate,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }
