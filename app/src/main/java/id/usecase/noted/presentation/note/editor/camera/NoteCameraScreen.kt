@@ -20,15 +20,16 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.BurstMode
-import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.FlipCameraAndroid
 import androidx.compose.material.icons.filled.FlashAuto
 import androidx.compose.material.icons.filled.FlashOff
@@ -39,9 +40,6 @@ import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.filled.TimerOff
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
@@ -57,11 +55,11 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.app.ActivityCompat
@@ -77,9 +75,9 @@ import id.usecase.noted.presentation.components.camera.CameraLevelIndicator
 import id.usecase.noted.presentation.components.camera.CameraShutterButton
 import id.usecase.noted.presentation.components.camera.CameraZoomSlider
 import id.usecase.noted.presentation.components.camera.FocusIndicator
+import id.usecase.noted.ui.theme.NotedTheme
 import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NoteCameraScreenRoot(
     onPhotoCaptured: (String) -> Unit,
@@ -153,22 +151,41 @@ fun NoteCameraScreenRoot(
         }
     }
 
+    NoteCameraScreen(
+        state = state,
+        hasCameraPermission = hasCameraPermission,
+        isPermanentlyDenied = isPermanentlyDenied,
+        onIntent = viewModel::onIntent,
+        onNavigateBack = onNavigateBack,
+        onRequestPermission = {
+            if (isPermanentlyDenied) {
+                openAppSettings(context)
+            } else {
+                permissionLauncher.launch(Manifest.permission.CAMERA)
+            }
+        },
+        onPhotoCaptured = { uri ->
+            viewModel.onIntent(CameraIntent.ConfirmPhoto(uri))
+        },
+        modifier = modifier,
+    )
+}
+
+@Composable
+private fun NoteCameraScreen(
+    state: CameraState,
+    hasCameraPermission: Boolean,
+    isPermanentlyDenied: Boolean,
+    onIntent: (CameraIntent) -> Unit,
+    onNavigateBack: () -> Unit,
+    onRequestPermission: () -> Unit,
+    onPhotoCaptured: (String) -> Unit,
+    modifier: Modifier = Modifier,
+    showCameraPreview: Boolean = true,
+) {
     Scaffold(
         modifier = modifier.fillMaxSize(),
-        snackbarHost = { SnackbarHost(snackbarHostState) },
-        topBar = {
-            androidx.compose.material3.TopAppBar(
-                title = { Text("Camera") },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Navigate back",
-                        )
-                    }
-                },
-            )
-        },
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
     ) { innerPadding ->
         Box(
             modifier = Modifier
@@ -178,21 +195,15 @@ fun NoteCameraScreenRoot(
             if (hasCameraPermission) {
                 CameraContent(
                     state = state,
-                    onIntent = viewModel::onIntent,
-                    onPhotoCaptured = { uri ->
-                        viewModel.onIntent(CameraIntent.ConfirmPhoto(uri))
-                    },
+                    onIntent = onIntent,
+                    onNavigateBack = onNavigateBack,
+                    onPhotoCaptured = onPhotoCaptured,
+                    showCameraPreview = showCameraPreview,
                 )
             } else {
                 PermissionDeniedContent(
                     isPermanentlyDenied = isPermanentlyDenied,
-                    onRequestPermission = {
-                        if (isPermanentlyDenied) {
-                            openAppSettings(context)
-                        } else {
-                            permissionLauncher.launch(Manifest.permission.CAMERA)
-                        }
-                    },
+                    onRequestPermission = onRequestPermission,
                 )
             }
         }
@@ -203,7 +214,9 @@ fun NoteCameraScreenRoot(
 private fun CameraContent(
     state: CameraState,
     onIntent: (CameraIntent) -> Unit,
+    onNavigateBack: () -> Unit,
     onPhotoCaptured: (String) -> Unit,
+    showCameraPreview: Boolean = true,
 ) {
     val context = LocalContext.current
     val previewView = remember(context) { PreviewView(context) }
@@ -211,8 +224,8 @@ private fun CameraContent(
     var focusPoint by remember { mutableStateOf<Offset?>(null) }
     var showFocusIndicator by remember { mutableStateOf(false) }
 
-    LaunchedEffect(state.isInitialized) {
-        if (state.isInitialized) {
+    LaunchedEffect(state.isInitialized, showCameraPreview) {
+        if (showCameraPreview && state.isInitialized) {
             onIntent(CameraIntent.AttachPreviewSurface(previewView.surfaceProvider))
         }
     }
@@ -220,30 +233,38 @@ private fun CameraContent(
     Box(
         modifier = Modifier.fillMaxSize(),
     ) {
-        AndroidView(
-            modifier = Modifier
-                .fillMaxSize()
-            .pointerInput(Unit) {
-                detectTapGestures { offset ->
-                    focusPoint = offset
-                    showFocusIndicator = true
-                    val meteringPoint = previewView.meteringPointFactory.createPoint(offset.x, offset.y)
-                    onIntent(
-                        CameraIntent.TapToFocus(meteringPoint),
-                    )
-                }
-            }
-            .pointerInput(Unit) {
-                detectTransformGestures { centroid, pan, zoom, rotation ->
-                    if (zoom != 1f) {
-                        val currentZoom = state.zoomRatio
-                        val newZoom = (currentZoom * zoom).coerceIn(1f, state.maxZoom)
-                        onIntent(CameraIntent.SetZoom(newZoom))
+        if (showCameraPreview) {
+            AndroidView(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .pointerInput(Unit) {
+                        detectTapGestures { offset ->
+                            focusPoint = offset
+                            showFocusIndicator = true
+                            val meteringPoint = previewView.meteringPointFactory.createPoint(offset.x, offset.y)
+                            onIntent(
+                                CameraIntent.TapToFocus(meteringPoint),
+                            )
+                        }
                     }
-                }
-            },
-            factory = { previewView },
-        )
+                    .pointerInput(Unit) {
+                        detectTransformGestures { _, _, zoom, _ ->
+                            if (zoom != 1f) {
+                                val currentZoom = state.zoomRatio
+                                val newZoom = (currentZoom * zoom).coerceIn(1f, state.maxZoom)
+                                onIntent(CameraIntent.SetZoom(newZoom))
+                            }
+                        }
+                    },
+                factory = { previewView },
+            )
+        } else {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black),
+            )
+        }
 
         AnimatedVisibility(
             visible = state.isGridEnabled,
@@ -283,9 +304,17 @@ private fun CameraContent(
             modifier = Modifier
                 .fillMaxWidth()
                 .align(Alignment.TopCenter)
+                .statusBarsPadding()
                 .padding(top = 16.dp),
         ) {
             CameraControlRow {
+                CameraIconButton(
+                    icon = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = "Navigate back",
+                    onClick = onNavigateBack,
+                    isSelected = true
+                )
+
                 CameraIconButton(
                     icon = when (state.flashMode) {
                         FlashMode.OFF -> Icons.Default.FlashOff
@@ -449,6 +478,7 @@ private fun PermissionDeniedContent(
                     "Camera permission is required to take photos."
                 },
                 style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.padding(horizontal = 16.dp)
             )
             Button(
                 onClick = onRequestPermission,
@@ -468,4 +498,66 @@ private fun openAppSettings(context: android.content.Context) {
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
     }
     context.startActivity(intent)
+}
+
+@Preview(showBackground = true, backgroundColor = 0xFF000000)
+@Composable
+private fun NoteCameraScreenPreview() {
+    NotedTheme {
+        NoteCameraScreen(
+            state = CameraState(
+                isInitialized = true,
+                flashMode = FlashMode.AUTO,
+                zoomRatio = 2.0f,
+                maxZoom = 6.0f,
+                exposure = 1,
+                minExposure = -4,
+                maxExposure = 4,
+                isGridEnabled = true,
+                isLevelEnabled = true,
+                isBurstMode = true,
+            ),
+            hasCameraPermission = true,
+            isPermanentlyDenied = false,
+            onIntent = {},
+            onNavigateBack = {},
+            onRequestPermission = {},
+            onPhotoCaptured = {},
+            showCameraPreview = false,
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun NoteCameraScreenPermissionPreview() {
+    NotedTheme {
+        NoteCameraScreen(
+            state = CameraState(),
+            hasCameraPermission = false,
+            isPermanentlyDenied = false,
+            onIntent = {},
+            onNavigateBack = {},
+            onRequestPermission = {},
+            onPhotoCaptured = {},
+            showCameraPreview = false,
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun NoteCameraScreenPermissionDeniedPreview() {
+    NotedTheme {
+        NoteCameraScreen(
+            state = CameraState(),
+            hasCameraPermission = false,
+            isPermanentlyDenied = true,
+            onIntent = {},
+            onNavigateBack = {},
+            onRequestPermission = {},
+            onPhotoCaptured = {},
+            showCameraPreview = false,
+        )
+    }
 }
