@@ -19,8 +19,6 @@ import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.BottomAppBar
 import androidx.compose.material3.BottomAppBarDefaults
-import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.FloatingActionButtonDefaults
@@ -44,12 +42,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.isTraversalGroup
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.traversalIndex
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import id.usecase.noted.presentation.components.NotedSearchBar
 import id.usecase.noted.presentation.components.SearchResultItem
+import id.usecase.noted.presentation.components.feedback.EmptyState
+import id.usecase.noted.presentation.components.feedback.ErrorState
+import id.usecase.noted.presentation.components.feedback.LoadingState
 import id.usecase.noted.presentation.note.list.component.NoteHistoryListItem
 import id.usecase.noted.presentation.note.list.component.NoteListItem
 import id.usecase.noted.presentation.note.list.preview.NoteListPreviewData
@@ -200,21 +200,26 @@ fun NoteListScreen(
                 ) {
                     when {
                         state.isLoading -> {
-                            CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+                            LoadingState()
                         }
 
                         state.errorMessage != null -> {
                             ErrorState(
-                                errorMessage = state.errorMessage,
+                                message = state.errorMessage,
                                 onRetry = { onIntent(NoteListIntent.RetryObserve) },
                                 modifier = Modifier.align(Alignment.Center),
                             )
                         }
 
                         state.isCurrentTabEmpty -> {
+                            val message = when (state.selectedTab) {
+                                0 -> "Belum ada note. Tekan tombol + untuk menambahkan note."
+                                1 -> "Belum ada note tersimpan. Jelajahi note publik untuk menyimpan."
+                                2 -> "Belum ada riwayat. Note yang Anda lihat akan muncul di sini."
+                                else -> "Tidak ada data"
+                            }
                             EmptyState(
-                                selectedTab = state.selectedTab,
-                                isSearchActive = false,
+                                message = message,
                                 modifier = Modifier.align(Alignment.Center),
                             )
                         }
@@ -327,58 +332,7 @@ private fun HistoryListContent(
     }
 }
 
-@Composable
-private fun EmptyState(
-    selectedTab: Int,
-    isSearchActive: Boolean,
-    modifier: Modifier = Modifier,
-) {
-    val message = when {
-        isSearchActive -> "Tidak ada note yang cocok dengan pencarian"
-        selectedTab == 0 -> "Belum ada note. Tekan tombol + untuk menambahkan note."
-        selectedTab == 1 -> "Belum ada note tersimpan. Jelajahi note publik untuk menyimpan."
-        selectedTab == 2 -> "Belum ada riwayat. Note yang Anda lihat akan muncul di sini."
-        else -> "Tidak ada data"
-    }
 
-    Column(
-        modifier = modifier.fillMaxWidth(),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        Text(
-            text = message,
-            textAlign = TextAlign.Center,
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-    }
-}
-
-@Composable
-private fun ErrorState(
-    errorMessage: String,
-    onRetry: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        Text(
-            text = errorMessage,
-            textAlign = TextAlign.Center,
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.error,
-        )
-        Button(onClick = onRetry) {
-            Text("Coba Lagi")
-        }
-    }
-}
 
 @Preview(showBackground = true)
 @Composable
