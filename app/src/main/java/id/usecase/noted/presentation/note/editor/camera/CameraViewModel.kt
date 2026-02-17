@@ -7,8 +7,8 @@ import androidx.camera.core.ExposureState
 import androidx.camera.core.FocusMeteringAction
 import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageCaptureException
+import androidx.camera.core.MeteringPoint
 import androidx.camera.core.Preview
-import androidx.camera.core.SurfaceOrientedMeteringPointFactory
 import androidx.camera.core.ZoomState
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.content.ContextCompat
@@ -47,12 +47,7 @@ sealed interface CameraIntent {
     data object CapturePhoto : CameraIntent
     data class ConfirmPhoto(val uri: String) : CameraIntent
     data class AttachPreviewSurface(val surfaceProvider: Preview.SurfaceProvider) : CameraIntent
-    data class TapToFocus(
-        val x: Float,
-        val y: Float,
-        val viewWidth: Int,
-        val viewHeight: Int,
-    ) : CameraIntent
+    data class TapToFocus(val meteringPoint: MeteringPoint) : CameraIntent
     data object RetakePhoto : CameraIntent
     data object Cleanup : CameraIntent
 }
@@ -122,12 +117,7 @@ class CameraViewModel : ViewModel() {
             CameraIntent.CapturePhoto -> capturePhoto()
             is CameraIntent.ConfirmPhoto -> confirmPhoto(intent.uri)
             is CameraIntent.AttachPreviewSurface -> attachPreviewSurface(intent.surfaceProvider)
-            is CameraIntent.TapToFocus -> tapToFocus(
-                x = intent.x,
-                y = intent.y,
-                viewWidth = intent.viewWidth,
-                viewHeight = intent.viewHeight,
-            )
+            is CameraIntent.TapToFocus -> tapToFocus(intent.meteringPoint)
             CameraIntent.RetakePhoto -> retakePhoto()
             CameraIntent.Cleanup -> cleanup()
         }
@@ -415,19 +405,8 @@ class CameraViewModel : ViewModel() {
         preview?.setSurfaceProvider(surfaceProvider)
     }
 
-    private fun tapToFocus(
-        x: Float,
-        y: Float,
-        viewWidth: Int,
-        viewHeight: Int,
-    ) {
+    private fun tapToFocus(meteringPoint: MeteringPoint) {
         val currentCamera = camera ?: return
-        if (viewWidth <= 0 || viewHeight <= 0) {
-            return
-        }
-
-        val pointFactory = SurfaceOrientedMeteringPointFactory(viewWidth.toFloat(), viewHeight.toFloat())
-        val meteringPoint = pointFactory.createPoint(x, y)
         val action = FocusMeteringAction.Builder(
             meteringPoint,
             FocusMeteringAction.FLAG_AF or FocusMeteringAction.FLAG_AE,

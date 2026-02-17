@@ -227,13 +227,9 @@ private fun CameraContent(
                 detectTapGestures { offset ->
                     focusPoint = offset
                     showFocusIndicator = true
+                    val meteringPoint = previewView.meteringPointFactory.createPoint(offset.x, offset.y)
                     onIntent(
-                        CameraIntent.TapToFocus(
-                            x = offset.x,
-                            y = offset.y,
-                            viewWidth = previewView.width,
-                            viewHeight = previewView.height,
-                        ),
+                        CameraIntent.TapToFocus(meteringPoint),
                     )
                 }
             }

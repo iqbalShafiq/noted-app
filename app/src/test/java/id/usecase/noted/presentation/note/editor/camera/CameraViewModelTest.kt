@@ -1,5 +1,6 @@
 package id.usecase.noted.presentation.note.editor.camera
 
+import androidx.camera.core.SurfaceOrientedMeteringPointFactory
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withTimeoutOrNull
@@ -178,5 +179,15 @@ class CameraViewModelTest {
             viewModel.effect.first()
         }
         assertNull(secondEffect)
+    }
+
+    @Test
+    fun `tapToFocus with metering point keeps state unchanged when camera unavailable`() = runTest {
+        val initialState = viewModel.state.first()
+        val meteringPoint = SurfaceOrientedMeteringPointFactory(100f, 100f).createPoint(50f, 50f)
+
+        viewModel.onIntent(CameraIntent.TapToFocus(meteringPoint))
+
+        assertEquals(initialState, viewModel.state.first())
     }
 }
