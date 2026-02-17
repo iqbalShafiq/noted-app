@@ -2,6 +2,7 @@ package id.usecase.noted.presentation.note.editor.camera
 
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -162,5 +163,20 @@ class CameraViewModelTest {
         // After retake, it should still be null (cleared)
         viewModel.onIntent(CameraIntent.RetakePhoto)
         assertNull(viewModel.state.first().capturedPhotoUri)
+    }
+
+    @Test
+    fun `confirmPhoto emits only one photo captured effect and no navigate back`() = runTest {
+        val expectedUri = "file:///tmp/photo.jpg"
+
+        viewModel.onIntent(CameraIntent.ConfirmPhoto(expectedUri))
+
+        val firstEffect = viewModel.effect.first()
+        assertEquals(CameraEffect.PhotoCaptured(expectedUri), firstEffect)
+
+        val secondEffect = withTimeoutOrNull(100) {
+            viewModel.effect.first()
+        }
+        assertNull(secondEffect)
     }
 }

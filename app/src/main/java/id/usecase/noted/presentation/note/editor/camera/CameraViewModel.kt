@@ -4,9 +4,11 @@ import android.content.Context
 import androidx.camera.core.Camera
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ExposureState
+import androidx.camera.core.FocusMeteringAction
 import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageCaptureException
 import androidx.camera.core.Preview
+import androidx.camera.core.SurfaceOrientedMeteringPointFactory
 import androidx.camera.core.ZoomState
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.content.ContextCompat
@@ -24,6 +26,7 @@ import kotlinx.coroutines.launch
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Locale
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
@@ -43,6 +46,13 @@ sealed interface CameraIntent {
     data object ToggleBurstMode : CameraIntent
     data object CapturePhoto : CameraIntent
     data class ConfirmPhoto(val uri: String) : CameraIntent
+    data class AttachPreviewSurface(val surfaceProvider: Preview.SurfaceProvider) : CameraIntent
+    data class TapToFocus(
+        val x: Float,
+        val y: Float,
+        val viewWidth: Int,
+        val viewHeight: Int,
+    ) : CameraIntent
     data object RetakePhoto : CameraIntent
     data object Cleanup : CameraIntent
 }
@@ -75,7 +85,6 @@ data class CameraState(
 sealed interface CameraEffect {
     data class ShowMessage(val message: String) : CameraEffect
     data class PhotoCaptured(val uri: String) : CameraEffect
-    data object NavigateBack : CameraEffect
 }
 
 class CameraViewModel : ViewModel() {
@@ -89,6 +98,7 @@ class CameraViewModel : ViewModel() {
     private var camera: Camera? = null
     private var imageCapture: ImageCapture? = null
     private var preview: Preview? = null
+    private var previewSurfaceProvider: Preview.SurfaceProvider? = null
     private var cameraExecutor: ExecutorService? = null
 
     private var context: Context? = null
@@ -111,6 +121,13 @@ class CameraViewModel : ViewModel() {
             CameraIntent.ToggleBurstMode -> toggleBurstMode()
             CameraIntent.CapturePhoto -> capturePhoto()
             is CameraIntent.ConfirmPhoto -> confirmPhoto(intent.uri)
+            is CameraIntent.AttachPreviewSurface -> attachPreviewSurface(intent.surfaceProvider)
+            is CameraIntent.TapToFocus -> tapToFocus(
+                x = intent.x,
+                y = intent.y,
+                viewWidth = intent.viewWidth,
+                viewHeight = intent.viewHeight,
+            )
             CameraIntent.RetakePhoto -> retakePhoto()
             CameraIntent.Cleanup -> cleanup()
         }
@@ -158,7 +175,10 @@ class CameraViewModel : ViewModel() {
 
         val preview = Preview.Builder()
             .build()
-            .also { this.preview = it }
+            .also { createdPreview ->
+                previewSurfaceProvider?.let(createdPreview::setSurfaceProvider)
+                this.preview = createdPreview
+            }
 
         val imageCapture = ImageCapture.Builder()
             .setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY)
@@ -368,7 +388,6 @@ class CameraViewModel : ViewModel() {
                             capturedPhotoUri = savedUri,
                         )
                     }
-                    sendEffect(CameraEffect.PhotoCaptured(savedUri))
                 }
             },
         )
@@ -385,8 +404,38 @@ class CameraViewModel : ViewModel() {
     }
 
     private fun confirmPhoto(uri: String) {
+        _state.update { currentState ->
+            currentState.copy(capturedPhotoUri = null)
+        }
         sendEffect(CameraEffect.PhotoCaptured(uri))
-        sendEffect(CameraEffect.NavigateBack)
+    }
+
+    private fun attachPreviewSurface(surfaceProvider: Preview.SurfaceProvider) {
+        previewSurfaceProvider = surfaceProvider
+        preview?.setSurfaceProvider(surfaceProvider)
+    }
+
+    private fun tapToFocus(
+        x: Float,
+        y: Float,
+        viewWidth: Int,
+        viewHeight: Int,
+    ) {
+        val currentCamera = camera ?: return
+        if (viewWidth <= 0 || viewHeight <= 0) {
+            return
+        }
+
+        val pointFactory = SurfaceOrientedMeteringPointFactory(viewWidth.toFloat(), viewHeight.toFloat())
+        val meteringPoint = pointFactory.createPoint(x, y)
+        val action = FocusMeteringAction.Builder(
+            meteringPoint,
+            FocusMeteringAction.FLAG_AF or FocusMeteringAction.FLAG_AE,
+        )
+            .setAutoCancelDuration(3, TimeUnit.SECONDS)
+            .build()
+
+        currentCamera.cameraControl.startFocusAndMetering(action)
     }
 
     private fun retakePhoto() {
@@ -408,6 +457,7 @@ class CameraViewModel : ViewModel() {
         camera = null
         imageCapture = null
         preview = null
+        previewSurfaceProvider = null
         context = null
         lifecycleOwner = null
 

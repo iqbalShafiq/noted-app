@@ -8,8 +8,6 @@ import android.net.Uri
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.camera.core.CameraSelector
-import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
@@ -145,9 +143,6 @@ fun NoteCameraScreenRoot(
                 is CameraEffect.PhotoCaptured -> {
                     onPhotoCaptured(effect.uri)
                 }
-                CameraEffect.NavigateBack -> {
-                    onNavigateBack()
-                }
             }
         }
     }
@@ -211,7 +206,6 @@ private fun CameraContent(
     onPhotoCaptured: (String) -> Unit,
 ) {
     val context = LocalContext.current
-    val lifecycleOwner = LocalLifecycleOwner.current
     val previewView = remember(context) { PreviewView(context) }
     
     var focusPoint by remember { mutableStateOf<Offset?>(null) }
@@ -219,21 +213,7 @@ private fun CameraContent(
 
     LaunchedEffect(state.isInitialized) {
         if (state.isInitialized) {
-            val cameraProvider = ProcessCameraProvider.getInstance(context).get()
-            val preview = androidx.camera.core.Preview.Builder()
-                .build()
-                .apply {
-                    surfaceProvider = previewView.surfaceProvider
-                }
-            
-            try {
-                cameraProvider.unbindAll()
-                cameraProvider.bindToLifecycle(
-                    lifecycleOwner,
-                    state.cameraSelector,
-                    preview,
-                )
-            } catch (_: Exception) { }
+            onIntent(CameraIntent.AttachPreviewSurface(previewView.surfaceProvider))
         }
     }
 
@@ -247,6 +227,14 @@ private fun CameraContent(
                 detectTapGestures { offset ->
                     focusPoint = offset
                     showFocusIndicator = true
+                    onIntent(
+                        CameraIntent.TapToFocus(
+                            x = offset.x,
+                            y = offset.y,
+                            viewWidth = previewView.width,
+                            viewHeight = previewView.height,
+                        ),
+                    )
                 }
             }
             .pointerInput(Unit) {

@@ -3,13 +3,11 @@ package id.usecase.noted.presentation.components.camera
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.tooling.preview.Preview
@@ -70,29 +68,26 @@ fun FocusIndicator(
     val strokeWidth = 2f
 
     Canvas(
-        modifier = modifier.size(sizeDp)
+        modifier = modifier
     ) {
         val indicatorSize = sizeDp.toPx() * scale
         val halfSize = indicatorSize / 2f
-
-        // Calculate actual position (center of canvas is at 0,0 relative to drawing)
-        // We draw relative to center, so we don't need to offset by x,y here
-        // The parent should position this component at (x, y)
+        val center = Offset(x, y)
 
         val color = Color.Yellow.copy(alpha = alpha)
 
         // Top-left corner
         drawLine(
             color = color,
-            start = Offset(-halfSize, -halfSize + cornerLength),
-            end = Offset(-halfSize, -halfSize),
+            start = Offset(center.x - halfSize, center.y - halfSize + cornerLength),
+            end = Offset(center.x - halfSize, center.y - halfSize),
             strokeWidth = strokeWidth,
             cap = StrokeCap.Round
         )
         drawLine(
             color = color,
-            start = Offset(-halfSize, -halfSize),
-            end = Offset(-halfSize + cornerLength, -halfSize),
+            start = Offset(center.x - halfSize, center.y - halfSize),
+            end = Offset(center.x - halfSize + cornerLength, center.y - halfSize),
             strokeWidth = strokeWidth,
             cap = StrokeCap.Round
         )
@@ -100,15 +95,15 @@ fun FocusIndicator(
         // Top-right corner
         drawLine(
             color = color,
-            start = Offset(halfSize - cornerLength, -halfSize),
-            end = Offset(halfSize, -halfSize),
+            start = Offset(center.x + halfSize - cornerLength, center.y - halfSize),
+            end = Offset(center.x + halfSize, center.y - halfSize),
             strokeWidth = strokeWidth,
             cap = StrokeCap.Round
         )
         drawLine(
             color = color,
-            start = Offset(halfSize, -halfSize),
-            end = Offset(halfSize, -halfSize + cornerLength),
+            start = Offset(center.x + halfSize, center.y - halfSize),
+            end = Offset(center.x + halfSize, center.y - halfSize + cornerLength),
             strokeWidth = strokeWidth,
             cap = StrokeCap.Round
         )
@@ -116,15 +111,15 @@ fun FocusIndicator(
         // Bottom-right corner
         drawLine(
             color = color,
-            start = Offset(halfSize, halfSize - cornerLength),
-            end = Offset(halfSize, halfSize),
+            start = Offset(center.x + halfSize, center.y + halfSize - cornerLength),
+            end = Offset(center.x + halfSize, center.y + halfSize),
             strokeWidth = strokeWidth,
             cap = StrokeCap.Round
         )
         drawLine(
             color = color,
-            start = Offset(halfSize, halfSize),
-            end = Offset(halfSize - cornerLength, halfSize),
+            start = Offset(center.x + halfSize, center.y + halfSize),
+            end = Offset(center.x + halfSize - cornerLength, center.y + halfSize),
             strokeWidth = strokeWidth,
             cap = StrokeCap.Round
         )
@@ -132,15 +127,15 @@ fun FocusIndicator(
         // Bottom-left corner
         drawLine(
             color = color,
-            start = Offset(-halfSize + cornerLength, halfSize),
-            end = Offset(-halfSize, halfSize),
+            start = Offset(center.x - halfSize + cornerLength, center.y + halfSize),
+            end = Offset(center.x - halfSize, center.y + halfSize),
             strokeWidth = strokeWidth,
             cap = StrokeCap.Round
         )
         drawLine(
             color = color,
-            start = Offset(-halfSize, halfSize),
-            end = Offset(-halfSize, halfSize - cornerLength),
+            start = Offset(center.x - halfSize, center.y + halfSize),
+            end = Offset(center.x - halfSize, center.y + halfSize - cornerLength),
             strokeWidth = strokeWidth,
             cap = StrokeCap.Round
         )
