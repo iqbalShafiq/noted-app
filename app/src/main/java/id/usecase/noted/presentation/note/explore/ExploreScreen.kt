@@ -1,5 +1,6 @@
 package id.usecase.noted.presentation.note.explore
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,10 +15,8 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -27,8 +26,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SearchBar
 import androidx.compose.material3.SearchBarDefaults
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.foundation.clickable
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -41,6 +38,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import id.usecase.noted.presentation.components.feedback.EmptyState
+import id.usecase.noted.presentation.components.feedback.ErrorState
+import id.usecase.noted.presentation.components.feedback.LoadingState
+import id.usecase.noted.presentation.components.navigation.NotedTopAppBar
 import id.usecase.noted.ui.theme.NotedTheme
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -84,16 +85,9 @@ fun ExploreScreen(
         Scaffold(
             modifier = Modifier.fillMaxSize(),
             topBar = {
-                TopAppBar(
-                    title = { Text("Jelajahi") },
-                    navigationIcon = {
-                        IconButton(onClick = { onIntent(ExploreIntent.NavigateBackClicked) }) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = "Kembali",
-                            )
-                        }
-                    },
+                NotedTopAppBar(
+                    title = "Jelajahi",
+                    onNavigateBack = { onIntent(ExploreIntent.NavigateBackClicked) },
                     actions = {
                         IconButton(onClick = { onIntent(ExploreIntent.SearchClicked) }) {
                             Icon(
@@ -112,48 +106,20 @@ fun ExploreScreen(
             ) {
                 when {
                     state.isLoading -> {
-                        CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+                        LoadingState()
                     }
 
                     state.errorMessage != null -> {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp)
-                                .align(Alignment.Center),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(12.dp),
-                        ) {
-                            Text(
-                                text = state.errorMessage,
-                                textAlign = TextAlign.Center,
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.error,
-                            )
-                            Button(
-                                onClick = { onIntent(ExploreIntent.LoadExploreNotes) },
-                            ) {
-                                Text("Coba Lagi")
-                            }
-                        }
+                        ErrorState(
+                            message = state.errorMessage,
+                            onRetry = { onIntent(ExploreIntent.LoadExploreNotes) },
+                        )
                     }
 
                     state.notes.isEmpty() -> {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp)
-                                .align(Alignment.Center),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(8.dp),
-                        ) {
-                            Text(
-                                text = "Belum ada note dari pengguna lain",
-                                textAlign = TextAlign.Center,
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
+                        EmptyState(
+                            message = "Belum ada note dari pengguna lain",
+                        )
                     }
 
                     else -> {
