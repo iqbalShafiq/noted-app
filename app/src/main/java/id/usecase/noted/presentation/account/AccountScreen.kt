@@ -28,7 +28,6 @@ import androidx.compose.material3.BottomAppBarDefaults
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.FloatingActionButtonDefaults
@@ -41,7 +40,6 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -59,6 +57,9 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import id.usecase.noted.presentation.components.content.InfoRow
+import id.usecase.noted.presentation.components.feedback.LoadingState
+import id.usecase.noted.presentation.components.navigation.NotedTopAppBar
 import id.usecase.noted.ui.theme.NotedTheme
 import java.text.DateFormat
 import java.text.SimpleDateFormat
@@ -112,16 +113,9 @@ fun AccountScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("Akun") },
-                navigationIcon = {
-                    IconButton(onClick = { onIntent(AccountIntent.NavigateBackClicked) }) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Kembali",
-                        )
-                    }
-                },
+            NotedTopAppBar(
+                title = "Akun",
+                onNavigateBack = { onIntent(AccountIntent.NavigateBackClicked) },
             )
         },
         bottomBar = {
@@ -145,7 +139,7 @@ fun AccountScreen(
         ) {
             when {
                 state.isLoading -> {
-                    CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+                    LoadingState()
                 }
 
                 state.errorMessage != null -> {
@@ -451,46 +445,30 @@ private fun AccountInfoSection(
             )
 
             userId?.let {
-                InfoItem(label = "User ID", value = it)
+                InfoRow(label = "User ID", value = it)
             }
 
             createdAtEpochMillis?.let {
-                InfoItem(
+                InfoRow(
                     label = "Bergabung Sejak",
                     value = formatDate(it),
                 )
             }
 
             lastLoginAtEpochMillis?.let {
-                InfoItem(
+                InfoRow(
                     label = "Login Terakhir",
                     value = formatDateTime(it),
                 )
             }
 
             updatedAtEpochMillis?.let {
-                InfoItem(
+                InfoRow(
                     label = "Profil Diperbarui",
                     value = formatDateTime(it),
                 )
             }
         }
-    }
-}
-
-@Composable
-private fun InfoItem(label: String, value: String) {
-    Column {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Text(
-            text = value,
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurface,
-        )
     }
 }
 
