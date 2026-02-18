@@ -48,9 +48,18 @@ class NoteSharingService(
     }
 
     suspend fun getAccessibleNote(userId: String, noteId: String): NoteDto? {
-        val note = getNoteById(noteId) ?: return null
-        val canAccess = note.ownerUserId == userId || note.sharedWithUserIds.contains(userId)
-        return if (canAccess) note else null
+        val stored = noteRepository.findById(noteId)
+            ?.takeIf { it.deletedAtEpochMillis == null }
+            ?: return null
+        val canAccess = stored.ownerUserId == userId ||
+            stored.visibility == NoteVisibility.PUBLIC ||
+            stored.visibility == NoteVisibility.LINK_SHARED ||
+            noteShareRepository.hasShare(noteId = noteId, recipientUserId = userId)
+        return if (canAccess) {
+            stored.toNoteDto(sharedWithUserIds = sharedWithUserIds(noteId))
+        } else {
+            null
+        }
     }
 
     suspend fun getNoteByLink(noteId: String, requestingUserId: String?): NoteDto? {

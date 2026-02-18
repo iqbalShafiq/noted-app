@@ -12,4 +12,6 @@ interface NoteShareRepository {
     suspend fun findByNoteId(noteId: String): List<StoredNoteShare>
 
     suspend fun findByRecipientUserId(recipientUserId: String): List<StoredNoteShare>
+
+    suspend fun hasShare(noteId: String, recipientUserId: String): Boolean
 }

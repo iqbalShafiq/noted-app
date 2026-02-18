@@ -4,7 +4,9 @@ import id.usecase.noted.data.sync.ExploreRepository
 import id.usecase.noted.presentation.MainDispatcherRule
 import id.usecase.noted.shared.note.NoteDto
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
@@ -26,6 +28,20 @@ class ExploreViewModelTest {
 
         assertFalse(viewModel.state.value.isLoading)
         assertEquals("Login diperlukan untuk explore", viewModel.state.value.errorMessage)
+    }
+
+    @Test
+    fun noteClickedEmitsNavigateToNoteDetailEffect() = runTest {
+        val viewModel = ExploreViewModel(exploreRepository = ThrowingExploreRepository())
+        val firstEffect = async { viewModel.effect.first() }
+
+        viewModel.onIntent(ExploreIntent.NoteClicked(noteId = "note-123"))
+        advanceUntilIdle()
+
+        assertEquals(
+            ExploreEffect.NavigateToNoteDetail(noteId = "note-123"),
+            firstEffect.await(),
+        )
     }
 }
 

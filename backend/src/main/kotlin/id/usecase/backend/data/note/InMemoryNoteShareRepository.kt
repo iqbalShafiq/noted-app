@@ -42,4 +42,10 @@ class InMemoryNoteShareRepository : NoteShareRepository {
                 .toList()
         }
     }
+
+    override suspend fun hasShare(noteId: String, recipientUserId: String): Boolean {
+        return mutex.withLock {
+            shares.any { it.noteId == noteId && it.recipientUserId == recipientUserId }
+        }
+    }
 }

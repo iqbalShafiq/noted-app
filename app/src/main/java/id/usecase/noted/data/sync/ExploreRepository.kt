@@ -1,6 +1,7 @@
 package id.usecase.noted.data.sync
 
 import id.usecase.noted.shared.note.NoteDto
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 
@@ -19,10 +20,13 @@ class SyncExploreRepository(
         val token = session.accessToken
             ?: throw IllegalStateException("Login diperlukan untuk explore")
 
-        runCatching {
-            exploreApi.exploreNotes(accessToken = token, limit = limit)
-        }.let { result ->
-            emit(result)
+        try {
+            emit(Result.success(exploreApi.exploreNotes(accessToken = token, limit = limit)))
+        } catch (error: Throwable) {
+            if (error is CancellationException) {
+                throw error
+            }
+            emit(Result.failure(error))
         }
     }
 
@@ -31,10 +35,13 @@ class SyncExploreRepository(
         val token = session.accessToken
             ?: throw IllegalStateException("Login diperlukan untuk pencarian")
 
-        runCatching {
-            exploreApi.searchExploreNotes(accessToken = token, query = query, limit = limit)
-        }.let { result ->
-            emit(result)
+        try {
+            emit(Result.success(exploreApi.searchExploreNotes(accessToken = token, query = query, limit = limit)))
+        } catch (error: Throwable) {
+            if (error is CancellationException) {
+                throw error
+            }
+            emit(Result.failure(error))
         }
     }
 
@@ -43,10 +50,13 @@ class SyncExploreRepository(
         val token = session.accessToken
             ?: throw IllegalStateException("Login diperlukan untuk melihat note")
 
-        runCatching {
-            exploreApi.getNoteById(accessToken = token, noteId = noteId)
-        }.let { result ->
-            emit(result)
+        try {
+            emit(Result.success(exploreApi.getNoteById(accessToken = token, noteId = noteId)))
+        } catch (error: Throwable) {
+            if (error is CancellationException) {
+                throw error
+            }
+            emit(Result.failure(error))
         }
     }
 }

@@ -15,6 +15,7 @@ import id.usecase.noted.presentation.auth.AuthForgotPasswordScreenRoot
 import id.usecase.noted.presentation.auth.AuthLoginScreenRoot
 import id.usecase.noted.presentation.auth.AuthRegisterScreenRoot
 import id.usecase.noted.presentation.auth.AuthViewModel
+import id.usecase.noted.presentation.note.detail.NoteDetailIntent
 import id.usecase.noted.presentation.note.detail.NoteDetailScreenRoot
 import id.usecase.noted.presentation.note.detail.NoteDetailViewModel
 import id.usecase.noted.presentation.note.editor.NoteEditorIntent
@@ -299,12 +300,18 @@ fun NoteNavigation(
                                 backStack.add(NoteListNavKey)
                             }
                         },
+                        onNavigateToNoteDetail = { noteId ->
+                            val destination = NoteDetailNavKey(noteId = noteId)
+                            if (backStack.lastOrNull() != destination) {
+                                backStack.add(destination)
+                            }
+                        },
                         modifier = Modifier.fillMaxSize(),
                     )
                 }
                 entry<NoteDetailNavKey> { key ->
                     LaunchedEffect(key.noteId) {
-                        noteDetailViewModel.loadNote(key.noteId)
+                        noteDetailViewModel.onIntent(NoteDetailIntent.NoteOpened(key.noteId))
                     }
                     NoteDetailScreenRoot(
                         viewModel = noteDetailViewModel,

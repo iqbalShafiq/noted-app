@@ -191,6 +191,142 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
+  /notes/{noteId}/engagement:
+    get:
+      summary: Get note engagement
+      description: Retrieve love and comment counters for an accessible note.
+      parameters:
+        - name: noteId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Engagement retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NoteEngagementDto'
+        '400':
+          description: Invalid note id or inaccessible note
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /notes/{noteId}/reactions/love:
+    put:
+      summary: Add love reaction
+      description: Add LOVE reaction by authenticated user and return latest engagement.
+      parameters:
+        - name: noteId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Love reaction applied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NoteEngagementDto'
+        '400':
+          description: Invalid note id or inaccessible note
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    delete:
+      summary: Remove love reaction
+      description: Remove LOVE reaction by authenticated user and return latest engagement.
+      parameters:
+        - name: noteId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Love reaction removed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NoteEngagementDto'
+        '400':
+          description: Invalid note id or inaccessible note
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /notes/{noteId}/comments:
+    get:
+      summary: List note comments
+      description: List comments for an accessible note in newest-first order.
+      parameters:
+        - name: noteId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 20
+            minimum: 1
+            maximum: 100
+        - name: beforeEpochMillis
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Comments page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NoteCommentsPageDto'
+        '400':
+          description: Invalid request or inaccessible note
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    post:
+      summary: Create note comment
+      description: Create a new comment for an accessible note.
+      parameters:
+        - name: noteId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateNoteCommentRequest'
+      responses:
+        '201':
+          description: Comment created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NoteCommentDto'
+        '400':
+          description: Invalid request or inaccessible note
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
   /notes/shared-with-me:
     get:
       summary: Get shared notes
@@ -273,8 +409,10 @@ components:
     ErrorResponse:
       type: object
       properties:
-        error:
+        message:
           type: string
+      required:
+        - message
 
     AuthRegisterRequest:
       type: object
@@ -373,6 +511,95 @@ components:
           type: array
           items:
             type: string
+
+    NoteReactionType:
+      type: string
+      description: Supported reactions for a note.
+      enum: [LOVE]
+      example: LOVE
+
+    NoteEngagementDto:
+      type: object
+      description: Aggregate engagement counters for a note.
+      properties:
+        noteId:
+          type: string
+          example: note-123
+        loveCount:
+          type: integer
+          example: 12
+        hasLovedByMe:
+          type: boolean
+          example: true
+        commentCount:
+          type: integer
+          example: 4
+      required:
+        - noteId
+        - loveCount
+        - hasLovedByMe
+        - commentCount
+
+    NoteCommentDto:
+      type: object
+      description: Public comment entry attached to a note.
+      properties:
+        id:
+          type: string
+          example: comment-456
+        noteId:
+          type: string
+          example: note-123
+        authorUserId:
+          type: string
+          example: user-789
+        authorUsername:
+          type: string
+          example: maria
+        content:
+          type: string
+          example: Great summary.
+        createdAtEpochMillis:
+          type: integer
+          format: int64
+          example: 1735689600000
+      required:
+        - id
+        - noteId
+        - authorUserId
+        - authorUsername
+        - content
+        - createdAtEpochMillis
+
+    NoteCommentsPageDto:
+      type: object
+      description: Paged comments response sorted by newest first.
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/NoteCommentDto'
+        nextBeforeEpochMillis:
+          type: integer
+          format: int64
+          nullable: true
+          description: Cursor for fetching older comments; null means no more pages.
+          example: 1735689500000
+      required:
+        - items
+
+    CreateNoteCommentRequest:
+      type: object
+      description: Request body for creating a new note comment.
+      properties:
+        content:
+          type: string
+          maxLength: 500
+          pattern: '.*\S.*'
+          description: Comment body. Raw input max length is 500, must contain at least one non-whitespace character, and is trimmed before storage.
+          example: Thanks for sharing this note.
+      required:
+        - content
 
     ShareNoteResponse:
       type: object

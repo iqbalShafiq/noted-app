@@ -9,16 +9,23 @@ import id.usecase.backend.data.auth.InMemoryAuthRepository
 import id.usecase.backend.data.auth.PostgresAuthRepository
 import id.usecase.backend.data.note.InMemoryNoteHistoryRepository
 import id.usecase.backend.data.note.InMemoryNoteRepository
+import id.usecase.backend.data.note.InMemoryNoteCommentRepository
+import id.usecase.backend.data.note.InMemoryNoteReactionRepository
 import id.usecase.backend.data.note.InMemoryNoteShareRepository
+import id.usecase.backend.data.note.PostgresNoteCommentRepository
 import id.usecase.backend.data.note.PostgresNoteHistoryRepository
 import id.usecase.backend.data.note.PostgresNoteRepository
+import id.usecase.backend.data.note.PostgresNoteReactionRepository
 import id.usecase.backend.data.note.PostgresNoteShareRepository
 import id.usecase.backend.domain.auth.AuthRepository
+import id.usecase.backend.domain.note.NoteCommentRepository
 import id.usecase.backend.domain.note.NoteHistoryRepository
+import id.usecase.backend.domain.note.NoteReactionRepository
 import id.usecase.backend.domain.note.NoteRepository
 import id.usecase.backend.domain.note.NoteShareRepository
 import id.usecase.backend.domain.note.NoteSyncRepository
 import id.usecase.backend.service.auth.AuthService
+import id.usecase.backend.service.note.NoteEngagementService
 import id.usecase.backend.service.note.NoteHistoryService
 import id.usecase.backend.service.note.NoteSharingService
 import id.usecase.backend.service.sync.NoteSyncService
@@ -80,6 +87,14 @@ private fun commonModule(config: ApplicationConfig) = module {
         )
     }
     single {
+        NoteEngagementService(
+            noteRepository = get(),
+            noteShareRepository = get(),
+            noteCommentRepository = get(),
+            noteReactionRepository = get(),
+        )
+    }
+    single {
         AuthService(
             authRepository = get(),
             jwtService = get(),
@@ -92,6 +107,8 @@ private fun inMemoryStorageModule() = module {
     single<NoteRepository> { get<InMemoryNoteRepository>() }
     single<NoteSyncRepository> { get<InMemoryNoteRepository>() }
     single<NoteShareRepository> { InMemoryNoteShareRepository() }
+    single<NoteCommentRepository> { InMemoryNoteCommentRepository() }
+    single<NoteReactionRepository> { InMemoryNoteReactionRepository() }
     single<NoteHistoryRepository> { InMemoryNoteHistoryRepository() }
     single<AuthRepository> { InMemoryAuthRepository() }
 }
@@ -108,6 +125,8 @@ private fun postgresStorageModule() = module {
     single<NoteRepository> { get<PostgresNoteRepository>() }
     single<NoteSyncRepository> { get<PostgresNoteRepository>() }
     single<NoteShareRepository> { PostgresNoteShareRepository(get()) }
+    single<NoteCommentRepository> { PostgresNoteCommentRepository(get()) }
+    single<NoteReactionRepository> { PostgresNoteReactionRepository(get()) }
     single<NoteHistoryRepository> { PostgresNoteHistoryRepository(get()) }
     single<AuthRepository> { PostgresAuthRepository(get()) }
 }
@@ -227,6 +246,11 @@ private fun initializeSchema(dataSource: DataSource) {
             statement.executeUpdate(CREATE_SYNC_EVENTS_TABLE_SQL)
             statement.executeUpdate(DROP_SYNC_EVENTS_FK_SQL)
             statement.executeUpdate(CREATE_SYNC_EVENTS_OWNER_CURSOR_INDEX_SQL)
+            statement.executeUpdate(CREATE_NOTE_COMMENTS_TABLE_SQL)
+            statement.executeUpdate(CREATE_NOTE_COMMENTS_NOTE_CREATED_INDEX_SQL)
+            statement.executeUpdate(CREATE_NOTE_COMMENTS_NOTE_CREATED_ID_INDEX_SQL)
+            statement.executeUpdate(CREATE_NOTE_REACTIONS_TABLE_SQL)
+            statement.executeUpdate(CREATE_NOTE_REACTIONS_NOTE_TYPE_INDEX_SQL)
             runCatching { statement.executeUpdate(ALTER_USERS_ADD_DISPLAY_NAME_SQL) }
             runCatching { statement.executeUpdate(ALTER_USERS_ADD_BIO_SQL) }
             runCatching { statement.executeUpdate(ALTER_USERS_ADD_PROFILE_PICTURE_URL_SQL) }
@@ -361,6 +385,41 @@ private const val DROP_SYNC_EVENTS_FK_SQL = """
 private const val CREATE_SYNC_EVENTS_OWNER_CURSOR_INDEX_SQL = """
     CREATE INDEX IF NOT EXISTS idx_note_sync_events_owner_cursor
     ON note_sync_events(owner_user_id, cursor)
+"""
+
+private const val CREATE_NOTE_COMMENTS_TABLE_SQL = """
+    CREATE TABLE IF NOT EXISTS note_comments (
+        id TEXT PRIMARY KEY,
+        note_id TEXT NOT NULL REFERENCES notes(id) ON DELETE CASCADE,
+        author_user_id TEXT NOT NULL,
+        content TEXT NOT NULL,
+        created_at_epoch_millis BIGINT NOT NULL
+    )
+"""
+
+private const val CREATE_NOTE_COMMENTS_NOTE_CREATED_INDEX_SQL = """
+    CREATE INDEX IF NOT EXISTS idx_note_comments_note_created
+    ON note_comments(note_id, created_at_epoch_millis DESC)
+"""
+
+private const val CREATE_NOTE_COMMENTS_NOTE_CREATED_ID_INDEX_SQL = """
+    CREATE INDEX IF NOT EXISTS idx_note_comments_note_created_id
+    ON note_comments(note_id, created_at_epoch_millis DESC, id DESC)
+"""
+
+private const val CREATE_NOTE_REACTIONS_TABLE_SQL = """
+    CREATE TABLE IF NOT EXISTS note_reactions (
+        note_id TEXT NOT NULL REFERENCES notes(id) ON DELETE CASCADE,
+        user_id TEXT NOT NULL,
+        reaction_type TEXT NOT NULL,
+        created_at_epoch_millis BIGINT NOT NULL,
+        PRIMARY KEY (note_id, user_id, reaction_type)
+    )
+"""
+
+private const val CREATE_NOTE_REACTIONS_NOTE_TYPE_INDEX_SQL = """
+    CREATE INDEX IF NOT EXISTS idx_note_reactions_note_type
+    ON note_reactions(note_id, reaction_type)
 """
 
 private const val ALTER_NOTES_ADD_VISIBILITY_SQL = """

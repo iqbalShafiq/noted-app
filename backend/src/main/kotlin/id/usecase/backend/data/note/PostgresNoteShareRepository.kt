@@ -63,6 +63,18 @@ class PostgresNoteShareRepository(
             }
         }
     }
+
+    override suspend fun hasShare(noteId: String, recipientUserId: String): Boolean {
+        dataSource.connection.use { connection ->
+            connection.prepareStatement(EXISTS_SQL).use { statement ->
+                statement.setString(1, noteId)
+                statement.setString(2, recipientUserId)
+                statement.executeQuery().use { resultSet ->
+                    return resultSet.next()
+                }
+            }
+        }
+    }
 }
 
 private fun java.sql.ResultSet.toStoredNoteShare(): StoredNoteShare {
@@ -98,4 +110,11 @@ private const val SELECT_BY_RECIPIENT_SQL = """
     FROM note_shares
     WHERE recipient_user_id = ?
     ORDER BY shared_at_epoch_millis DESC
+"""
+
+private const val EXISTS_SQL = """
+    SELECT 1
+    FROM note_shares
+    WHERE note_id = ? AND recipient_user_id = ?
+    LIMIT 1
 """

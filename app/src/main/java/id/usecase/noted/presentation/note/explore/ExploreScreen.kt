@@ -52,6 +52,7 @@ fun ExploreScreenRoot(
     viewModel: ExploreViewModel,
     onShowMessage: (String) -> Unit,
     onNavigateBack: () -> Unit,
+    onNavigateToNoteDetail: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -60,6 +61,7 @@ fun ExploreScreenRoot(
         viewModel.effect.collect { effect ->
             when (effect) {
                 ExploreEffect.NavigateBack -> onNavigateBack()
+                is ExploreEffect.NavigateToNoteDetail -> onNavigateToNoteDetail(effect.noteId)
                 is ExploreEffect.ShowMessage -> onShowMessage(effect.message)
             }
         }
@@ -138,7 +140,10 @@ fun ExploreScreen(
                                 items = notesToDisplay,
                                 key = { item -> item.id },
                             ) { item ->
-                                ExploreNoteItem(note = item)
+                                ExploreNoteItem(
+                                    note = item,
+                                    onClick = { onIntent(ExploreIntent.NoteClicked(item.id)) },
+                                )
                             }
                         }
                     }
@@ -154,6 +159,7 @@ fun ExploreScreen(
                 onDismiss = { onIntent(ExploreIntent.DismissSearch) },
                 searchHistory = state.searchHistory,
                 filteredNotes = state.filteredNotes,
+                onNoteClick = { onIntent(ExploreIntent.NoteClicked(it)) },
                 modifier = Modifier.fillMaxWidth(),
             )
         }
@@ -163,6 +169,7 @@ fun ExploreScreen(
 @Composable
 private fun ExploreNoteItem(
     note: ExploreNoteUi,
+    onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val formattedDate = remember(note.createdAt) {
@@ -170,7 +177,9 @@ private fun ExploreNoteItem(
     }
 
     Card(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
         ),
@@ -289,6 +298,7 @@ private fun ExploreSearchBar(
     onDismiss: () -> Unit,
     searchHistory: List<String>,
     filteredNotes: List<ExploreNoteUi>,
+    onNoteClick: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var expanded by remember { mutableStateOf(true) }
@@ -376,7 +386,7 @@ private fun ExploreSearchBar(
                                 )
                             },
                             modifier = Modifier.clickable {
-                                // Handle note click - could navigate to detail
+                                onNoteClick(note.id)
                                 expanded = false
                             },
                         )

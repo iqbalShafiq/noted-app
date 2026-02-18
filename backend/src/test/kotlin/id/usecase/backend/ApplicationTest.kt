@@ -5,8 +5,14 @@ import id.usecase.noted.shared.auth.AuthForgotPasswordResponse
 import id.usecase.noted.shared.auth.AuthLoginRequest
 import id.usecase.noted.shared.auth.AuthRegisterRequest
 import id.usecase.noted.shared.auth.AuthResponse
+import id.usecase.noted.shared.note.AddHistoryRequest
+import id.usecase.noted.shared.note.CreateNoteCommentRequest
 import id.usecase.noted.shared.note.CreateNoteRequest
+import id.usecase.noted.shared.note.NoteCommentDto
+import id.usecase.noted.shared.note.NoteCommentsPageDto
 import id.usecase.noted.shared.note.NoteDto
+import id.usecase.noted.shared.note.NoteEngagementDto
+import id.usecase.noted.shared.note.NoteHistoryDto
 import id.usecase.noted.shared.note.ShareNoteRequest
 import id.usecase.noted.shared.note.ShareNoteResponse
 import id.usecase.noted.shared.note.SyncMutationDto
@@ -15,8 +21,10 @@ import id.usecase.noted.shared.note.SyncPullResponse
 import id.usecase.noted.shared.note.SyncPushRequest
 import id.usecase.noted.shared.note.SyncPushResponse
 import io.ktor.client.request.bearerAuth
+import io.ktor.client.request.delete
 import io.ktor.client.request.get
 import io.ktor.client.request.post
+import io.ktor.client.request.put
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
@@ -224,6 +232,192 @@ class ApplicationTest {
             setBody(json.encodeToString(AuthLoginRequest("tester-forgot", "password456")))
         }
         assertEquals(HttpStatusCode.OK, newPasswordLogin.status)
+    }
+
+    @Test
+    fun authenticatedUserCanLoveAndUnloveAccessibleExploreNote() = testApplication {
+        application {
+            module(storageModeOverride = "memory")
+        }
+
+        val owner = registerAndLogin(username = "owner-engage-1", password = "password123")
+        val reader = registerAndLogin(username = "reader-engage-1", password = "password123")
+
+        val createResponse = client.post("/api/notes") {
+            contentType(ContentType.Application.Json)
+            bearerAuth(owner.accessToken)
+            setBody(
+                json.encodeToString(
+                    CreateNoteRequest(ownerUserId = "ignored", content = "Explorable note"),
+                ),
+            )
+        }
+        assertEquals(HttpStatusCode.Created, createResponse.status)
+        val created = json.decodeFromString<NoteDto>(createResponse.bodyAsText())
+
+        val shareResponse = client.post("/api/notes/${created.id}/share") {
+            contentType(ContentType.Application.Json)
+            bearerAuth(owner.accessToken)
+            setBody(json.encodeToString(ShareNoteRequest(recipientUserId = reader.userId)))
+        }
+        assertEquals(HttpStatusCode.Created, shareResponse.status)
+
+        val engagementBeforeResponse = client.get("/api/notes/${created.id}/engagement") {
+            bearerAuth(reader.accessToken)
+        }
+        assertEquals(HttpStatusCode.OK, engagementBeforeResponse.status)
+        val engagementBefore = json.decodeFromString<NoteEngagementDto>(engagementBeforeResponse.bodyAsText())
+        assertEquals(0, engagementBefore.loveCount)
+        assertTrue(!engagementBefore.hasLovedByMe)
+
+        val loveResponse = client.put("/api/notes/${created.id}/reactions/love") {
+            bearerAuth(reader.accessToken)
+        }
+        assertEquals(HttpStatusCode.OK, loveResponse.status)
+        val loved = json.decodeFromString<NoteEngagementDto>(loveResponse.bodyAsText())
+        assertEquals(1, loved.loveCount)
+        assertTrue(loved.hasLovedByMe)
+
+        val unloveResponse = client.delete("/api/notes/${created.id}/reactions/love") {
+            bearerAuth(reader.accessToken)
+        }
+        assertEquals(HttpStatusCode.OK, unloveResponse.status)
+        val unloved = json.decodeFromString<NoteEngagementDto>(unloveResponse.bodyAsText())
+        assertEquals(0, unloved.loveCount)
+        assertTrue(!unloved.hasLovedByMe)
+    }
+
+    @Test
+    fun authenticatedUserCanCreateAndFetchCommentsOnPublicOrLinkSharedNote() = testApplication {
+        application {
+            module(storageModeOverride = "memory")
+        }
+
+        val owner = registerAndLogin(username = "owner-engage-2", password = "password123")
+        val reader = registerAndLogin(username = "reader-engage-2", password = "password123")
+
+        val createResponse = client.post("/api/notes") {
+            contentType(ContentType.Application.Json)
+            bearerAuth(owner.accessToken)
+            setBody(
+                json.encodeToString(
+                    CreateNoteRequest(ownerUserId = "ignored", content = "Comment target note"),
+                ),
+            )
+        }
+        assertEquals(HttpStatusCode.Created, createResponse.status)
+        val created = json.decodeFromString<NoteDto>(createResponse.bodyAsText())
+
+        val shareResponse = client.post("/api/notes/${created.id}/share") {
+            contentType(ContentType.Application.Json)
+            bearerAuth(owner.accessToken)
+            setBody(json.encodeToString(ShareNoteRequest(recipientUserId = reader.userId)))
+        }
+        assertEquals(HttpStatusCode.Created, shareResponse.status)
+
+        val createCommentResponse = client.post("/api/notes/${created.id}/comments") {
+            contentType(ContentType.Application.Json)
+            bearerAuth(reader.accessToken)
+            setBody(json.encodeToString(CreateNoteCommentRequest(content = "  Great note  ")))
+        }
+        assertEquals(HttpStatusCode.Created, createCommentResponse.status)
+        val createdComment = json.decodeFromString<NoteCommentDto>(createCommentResponse.bodyAsText())
+        assertEquals(created.id, createdComment.noteId)
+        assertEquals(reader.userId, createdComment.authorUserId)
+        assertEquals(reader.username, createdComment.authorUsername)
+        assertEquals("Great note", createdComment.content)
+
+        val listCommentsResponse = client.get("/api/notes/${created.id}/comments?limit=20") {
+            bearerAuth(reader.accessToken)
+        }
+        assertEquals(HttpStatusCode.OK, listCommentsResponse.status)
+        val commentsPage = json.decodeFromString<NoteCommentsPageDto>(listCommentsResponse.bodyAsText())
+        assertEquals(1, commentsPage.items.size)
+        assertEquals(createdComment.id, commentsPage.items.first().id)
+        assertEquals(reader.username, commentsPage.items.first().authorUsername)
+
+        val engagementResponse = client.get("/api/notes/${created.id}/engagement") {
+            bearerAuth(reader.accessToken)
+        }
+        assertEquals(HttpStatusCode.OK, engagementResponse.status)
+        val engagement = json.decodeFromString<NoteEngagementDto>(engagementResponse.bodyAsText())
+        assertEquals(1, engagement.commentCount)
+    }
+
+    @Test
+    fun privateNoteCommentRequestReturns404Or400ForUnauthorizedUser() = testApplication {
+        application {
+            module(storageModeOverride = "memory")
+        }
+
+        val owner = registerAndLogin(username = "owner-engage-3", password = "password123")
+        val outsider = registerAndLogin(username = "outsider-engage-3", password = "password123")
+
+        val createResponse = client.post("/api/notes") {
+            contentType(ContentType.Application.Json)
+            bearerAuth(owner.accessToken)
+            setBody(
+                json.encodeToString(
+                    CreateNoteRequest(ownerUserId = "ignored", content = "Private note"),
+                ),
+            )
+        }
+        assertEquals(HttpStatusCode.Created, createResponse.status)
+        val created = json.decodeFromString<NoteDto>(createResponse.bodyAsText())
+
+        val createCommentResponse = client.post("/api/notes/${created.id}/comments") {
+            contentType(ContentType.Application.Json)
+            bearerAuth(outsider.accessToken)
+            setBody(json.encodeToString(CreateNoteCommentRequest(content = "Should not pass")))
+        }
+        assertEquals(HttpStatusCode.BadRequest, createCommentResponse.status)
+    }
+
+    @Test
+    fun noteHistoryRejectsRequestBodyNoteIdThatDiffersFromPath() = testApplication {
+        application {
+            module(storageModeOverride = "memory")
+        }
+
+        val owner = registerAndLogin(username = "owner-history-1", password = "password123")
+
+        val firstNoteCreateResponse = client.post("/api/notes") {
+            contentType(ContentType.Application.Json)
+            bearerAuth(owner.accessToken)
+            setBody(
+                json.encodeToString(
+                    CreateNoteRequest(ownerUserId = "ignored", content = "History source note"),
+                ),
+            )
+        }
+        assertEquals(HttpStatusCode.Created, firstNoteCreateResponse.status)
+        val firstNote = json.decodeFromString<NoteDto>(firstNoteCreateResponse.bodyAsText())
+
+        val secondNoteCreateResponse = client.post("/api/notes") {
+            contentType(ContentType.Application.Json)
+            bearerAuth(owner.accessToken)
+            setBody(
+                json.encodeToString(
+                    CreateNoteRequest(ownerUserId = "ignored", content = "Different note"),
+                ),
+            )
+        }
+        assertEquals(HttpStatusCode.Created, secondNoteCreateResponse.status)
+        val secondNote = json.decodeFromString<NoteDto>(secondNoteCreateResponse.bodyAsText())
+
+        val addHistoryResponse = client.post("/api/notes/${firstNote.id}/history") {
+            contentType(ContentType.Application.Json)
+            bearerAuth(owner.accessToken)
+            setBody(json.encodeToString(AddHistoryRequest(noteId = secondNote.id)))
+        }
+        assertEquals(HttpStatusCode.BadRequest, addHistoryResponse.status)
+
+        val historyResponse = client.get("/api/notes/history") {
+            bearerAuth(owner.accessToken)
+        }
+        assertEquals(HttpStatusCode.OK, historyResponse.status)
+        val historyItems = json.decodeFromString<List<NoteHistoryDto>>(historyResponse.bodyAsText())
+        assertTrue(historyItems.isEmpty())
     }
 
     private suspend fun ApplicationTestBuilder.registerAndLogin(

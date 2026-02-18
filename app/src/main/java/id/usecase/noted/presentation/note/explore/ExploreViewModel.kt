@@ -39,6 +39,7 @@ class ExploreViewModel(
             ExploreIntent.SearchClicked -> _state.update { it.copy(isSearchExpanded = true) }
             ExploreIntent.DismissSearch -> _state.update { it.copy(isSearchExpanded = false, searchQuery = "") }
             ExploreIntent.ClearSearchHistory -> _state.update { it.copy(searchHistory = emptyList()) }
+            is ExploreIntent.NoteClicked -> _effect.trySend(ExploreEffect.NavigateToNoteDetail(noteId = intent.noteId))
         }
     }
 

@@ -1,9 +1,11 @@
 package id.usecase.noted.presentation.note.detail
 
+import androidx.compose.foundation.ScrollState
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -28,13 +30,18 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import id.usecase.noted.presentation.components.content.InfoRow
+import id.usecase.noted.presentation.components.content.NoteCommentItem
+import id.usecase.noted.presentation.components.content.NoteCommentsSection
+import id.usecase.noted.presentation.components.content.NoteEngagementBar
 import id.usecase.noted.presentation.components.feedback.ErrorState
 import id.usecase.noted.presentation.components.feedback.LoadingState
 import id.usecase.noted.presentation.components.navigation.NotedTopAppBar
@@ -52,12 +59,16 @@ fun NoteDetailScreenRoot(
     modifier: Modifier = Modifier,
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    var scrollToCommentsRequest by remember { mutableIntStateOf(0) }
 
     LaunchedEffect(viewModel) {
         viewModel.effect.collect { effect ->
             when (effect) {
                 NoteDetailEffect.NavigateBack -> onNavigateBack()
                 is NoteDetailEffect.NavigateToEditor -> onNavigateToEditor(effect.localNoteId)
+                NoteDetailEffect.ScrollToComments -> {
+                    scrollToCommentsRequest += 1
+                }
                 is NoteDetailEffect.ShowMessage -> onShowMessage(effect.message)
             }
         }
@@ -67,6 +78,7 @@ fun NoteDetailScreenRoot(
         state = state,
         onIntent = viewModel::onIntent,
         onNavigateBack = onNavigateBack,
+        scrollToCommentsRequest = scrollToCommentsRequest,
         modifier = modifier,
     )
 }
@@ -77,9 +89,18 @@ fun NoteDetailScreen(
     state: NoteDetailState,
     onIntent: (NoteDetailIntent) -> Unit,
     onNavigateBack: () -> Unit,
+    scrollToCommentsRequest: Int = 0,
     modifier: Modifier = Modifier,
 ) {
     val canPerformActions = state.note != null && !state.isLoading
+    val scrollState = rememberScrollState()
+    val commentsBringIntoViewRequester = remember { BringIntoViewRequester() }
+
+    LaunchedEffect(scrollToCommentsRequest) {
+        if (scrollToCommentsRequest > 0) {
+            commentsBringIntoViewRequester.bringIntoView()
+        }
+    }
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
@@ -92,6 +113,14 @@ fun NoteDetailScreen(
         bottomBar = {
             BottomAppBar(
                 actions = {
+                    NoteEngagementBar(
+                        loveCount = state.engagement.loveCount,
+                        hasLovedByMe = state.engagement.hasLovedByMe,
+                        commentCount = state.engagement.commentCount,
+                        onLoveClick = { onIntent(NoteDetailIntent.LoveClicked) },
+                        onCommentsClick = { onIntent(NoteDetailIntent.CommentsClicked) },
+                        enabled = canPerformActions,
+                    )
                     IconButton(
                         onClick = { onIntent(NoteDetailIntent.CopyContentClicked) },
                         enabled = canPerformActions,
@@ -159,7 +188,11 @@ fun NoteDetailScreen(
 
                 state.note != null -> {
                     NoteContent(
+                        state = state,
                         note = state.note,
+                        onIntent = onIntent,
+                        scrollState = scrollState,
+                        commentsSectionModifier = Modifier.bringIntoViewRequester(commentsBringIntoViewRequester),
                         modifier = Modifier.fillMaxSize(),
                     )
                 }
@@ -170,10 +203,13 @@ fun NoteDetailScreen(
 
 @Composable
 private fun NoteContent(
+    state: NoteDetailState,
     note: ExternalNote,
+    onIntent: (NoteDetailIntent) -> Unit,
+    scrollState: ScrollState,
+    commentsSectionModifier: Modifier,
     modifier: Modifier = Modifier,
 ) {
-    val scrollState = rememberScrollState()
     val formattedDate = remember(note.createdAt) {
         SimpleDateFormat("dd MMMM yyyy, HH:mm", Locale.getDefault()).format(Date(note.createdAt))
     }
@@ -228,6 +264,34 @@ private fun NoteContent(
                 }
             }
         }
+
+        NoteCommentsSection(
+            comments = state.comments.map { comment ->
+                NoteCommentItem(
+                    id = comment.id,
+                    authorUsername = comment.authorUsername,
+                    content = comment.content,
+                    createdAtEpochMillis = comment.createdAtEpochMillis,
+                )
+            },
+            commentInput = state.commentInput,
+            isCommentsLoading = state.isCommentsLoading,
+            isSendingComment = state.isSendingComment,
+            hasMoreComments = state.hasMoreComments,
+            onCommentInputChanged = { value ->
+                onIntent(NoteDetailIntent.CommentInputChanged(value))
+            },
+            onSubmitComment = {
+                onIntent(NoteDetailIntent.SubmitCommentClicked)
+            },
+            onLoadMoreComments = {
+                onIntent(NoteDetailIntent.LoadMoreComments)
+            },
+            onRetryComments = {
+                onIntent(NoteDetailIntent.RetryClicked)
+            },
+            modifier = commentsSectionModifier,
+        )
     }
 }
 

@@ -8,4 +8,5 @@ sealed interface ExploreIntent {
     data object SearchClicked : ExploreIntent
     data object DismissSearch : ExploreIntent
     data object ClearSearchHistory : ExploreIntent
+    data class NoteClicked(val noteId: String) : ExploreIntent
 }

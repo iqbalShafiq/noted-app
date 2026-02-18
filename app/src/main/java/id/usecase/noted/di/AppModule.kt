@@ -12,12 +12,16 @@ import id.usecase.noted.data.sync.ExploreRepository
 import id.usecase.noted.data.sync.KtorAuthApi
 import id.usecase.noted.data.sync.KtorExploreApi
 import id.usecase.noted.data.sync.KtorNoteHistoryApi
+import id.usecase.noted.data.sync.KtorNoteEngagementApi
 import id.usecase.noted.data.sync.KtorNoteSyncApi
 import id.usecase.noted.data.sync.NetworkMonitor
+import id.usecase.noted.data.sync.NoteEngagementApi
+import id.usecase.noted.data.sync.NoteEngagementRepository
 import id.usecase.noted.data.sync.NoteHistoryApi
 import id.usecase.noted.data.sync.NoteSyncApi
 import id.usecase.noted.data.sync.NoteSyncCoordinator
 import id.usecase.noted.data.sync.SessionStore
+import id.usecase.noted.data.sync.SyncNoteEngagementRepository
 import id.usecase.noted.data.sync.SyncExploreRepository
 import id.usecase.noted.presentation.note.detail.NoteDetailViewModel
 import id.usecase.noted.data.user.KtorUserApi
@@ -105,6 +109,18 @@ val appModule = module {
             baseUrl = resolveBackendBaseUrl(BuildConfig.BACKEND_BASE_URL),
         )
     }
+    single<NoteEngagementApi> {
+        KtorNoteEngagementApi(
+            httpClient = get(),
+            baseUrl = resolveBackendBaseUrl(BuildConfig.BACKEND_BASE_URL),
+        )
+    }
+    single<NoteEngagementRepository> {
+        SyncNoteEngagementRepository(
+            noteEngagementApi = get(),
+            sessionStore = get(),
+        )
+    }
     single<NoteHistoryRepository> {
         NoteHistoryRepositoryImpl(
             noteHistoryDao = get(),
@@ -170,6 +186,7 @@ val appModule = module {
             exploreRepository = get(),
             noteRepository = get(),
             noteHistoryRepository = get(),
+            noteEngagementRepository = get(),
             sessionStore = get(),
             context = androidContext(),
         )
