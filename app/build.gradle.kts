@@ -1,12 +1,10 @@
-import com.android.build.api.dsl.ApplicationExtension
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
     alias(libs.plugins.android.application)
-    alias(libs.plugins.kotlin.android)
-    alias(libs.plugins.kotlin.compose)
-    alias(libs.plugins.ksp)
     alias(libs.plugins.kotlin.serialization)
+    alias(libs.plugins.ksp)
+    alias(libs.plugins.kotlin.compose)
 }
 
 val backendBaseUrl: String = (project.findProperty("BACKEND_BASE_URL") as? String)
@@ -21,7 +19,7 @@ fun toBuildConfigStringLiteral(value: String): String {
     return "\"$escaped\""
 }
 
-configure<ApplicationExtension> {
+android {
     namespace = "id.usecase.noted"
     compileSdk {
         version = release(36)
